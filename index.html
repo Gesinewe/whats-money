@@ -1,0 +1,1154 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Lernspiel über Geld: Begleite Moni durch 14 Stationen und lege ihr Geld im Simulator an.">
+<meta name="theme-color" content="#ECF1EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1917" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="What's money?">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="fonts/fonts.css">
+<title>What's money?</title>
+<style>
+/* Layout: eine Spalte wie ein Sparbuch — Kopfzeile mit Geldbörse, darunter Karte, Station oder Simulator. Banknoten-Guilloche als einziges Ornament. */
+:root{
+  --paper:#ECF1EC; --card:#FAFCF9; --ink:#15302B; --muted:#5A6E68; --line:#CCD8D1;
+  --mint:#1D7A61; --mint-soft:#D5EBE2; --gold:#C38F22; --gold-soft:#F5E6C4; --coin:#E3B341; --coin-dark:#A87618;
+  --red:#B2453B; --red-soft:#F4DCD8; --onaccent:#FFFFFF;
+  --f-display:"Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-num:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0F1917; --card:#172421; --ink:#E3EDE8; --muted:#97ABA4; --line:#2B3D38;
+  --mint:#55C3A2; --mint-soft:#1D3A32; --gold:#E3B24E; --gold-soft:#3A2F17; --coin:#E3B341; --coin-dark:#A87618;
+  --red:#E58176; --red-soft:#3D221F; --onaccent:#0F1917; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --paper:#0F1917; --card:#172421; --ink:#E3EDE8; --muted:#97ABA4; --line:#2B3D38;
+  --mint:#55C3A2; --mint-soft:#1D3A32; --gold:#E3B24E; --gold-soft:#3A2F17; --coin:#E3B341; --coin-dark:#A87618;
+  --red:#E58176; --red-soft:#3D221F; --onaccent:#0F1917; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.55;margin:0}
+.app{max-width:880px;margin:0 auto;padding:16px 16px 48px;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--f-display);line-height:1.1;text-wrap:balance;margin:0}
+h1{font-size:clamp(2.2rem,7vw,3.4rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(1.5rem,4.5vw,2rem);font-weight:800;letter-spacing:-.01em}
+h3{font-size:1.2rem;font-weight:700}
+p{margin:0}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.label{font-size:.75rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+a{color:var(--mint)}
+
+/* Kopfzeile */
+.top{position:relative;overflow:hidden;border:1.5px solid var(--ink);border-radius:18px;padding:18px 20px;background:var(--card);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.top::before{content:"";position:absolute;inset:0;opacity:.13;pointer-events:none;
+  background:
+   repeating-radial-gradient(circle at 105% 120%, var(--mint) 0 1px, transparent 1px 9px),
+   repeating-radial-gradient(circle at -5% -40%, var(--gold) 0 1px, transparent 1px 11px)}
+.brand{position:relative;flex:1 1 260px;min-width:0;display:flex;align-items:center;gap:14px;cursor:pointer;background:none;border:0;padding:0;text-align:left}
+.brand small{display:block;font-size:.9rem;color:var(--muted);margin-top:4px}
+.wallet{position:relative;display:flex;gap:10px;flex-wrap:wrap}
+.chip{border:1.5px solid var(--ink);border-radius:999px;padding:6px 14px;background:var(--paper);display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;min-width:120px}
+.chip b{font-family:var(--f-num);font-size:1.15rem}
+.chip.gold{background:var(--gold-soft)}
+.plus{position:absolute;right:10px;top:-6px;font-family:var(--f-num);font-weight:600;color:var(--mint);animation:rise 1.2s ease-out forwards;pointer-events:none}
+@keyframes rise{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-28px)}}
+
+/* Moni */
+.moni{flex:none;width:64px;height:64px}
+.moni.big{width:110px;height:110px}
+.moni .body{animation:bob 3.2s ease-in-out infinite;transform-origin:50% 60%}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+.say{display:flex;gap:14px;align-items:flex-start}
+.bubble{position:relative;flex:1;min-width:0;background:var(--card);border:1.5px solid var(--ink);border-radius:16px;padding:14px 16px}
+.bubble::before{content:"";position:absolute;left:-9px;top:22px;width:14px;height:14px;background:var(--card);border-left:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink);transform:rotate(45deg)}
+.bubble b{color:var(--mint)}
+
+/* Karte */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.st{position:relative;text-align:left;border:1.5px solid var(--ink);border-radius:16px;background:var(--card);padding:14px 14px 12px;display:flex;gap:12px;align-items:flex-start;transition:transform .15s ease, box-shadow .15s ease}
+.st:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 4px 0 var(--ink)}
+.st:disabled{cursor:not-allowed;opacity:.5;border-style:dashed}
+.st .c{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-num);font-weight:600;font-size:1.05rem;color:#3B2A06;background:radial-gradient(circle at 35% 30%, #F6DA86, var(--coin) 55%, var(--coin-dark));border:2px solid var(--coin-dark)}
+.st.done .c{box-shadow:0 0 0 3px var(--mint)}
+.st .t{min-width:0;display:flex;flex-direction:column;gap:2px}
+.st .t strong{font-family:var(--f-display);font-size:1.08rem}
+.st .t span{font-size:.92rem;color:var(--muted)}
+.stars{font-size:.95rem;letter-spacing:2px;color:var(--gold)}
+.stars i{font-style:normal;color:var(--line)}
+.st.final{grid-column:1/-1;background:var(--mint-soft)}
+.st.final .c{background:var(--mint);border-color:var(--mint);color:var(--onaccent)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.between{justify-content:space-between}
+.toggle{display:flex;gap:8px;align-items:center;font-size:.92rem;color:var(--muted)}
+
+/* Station */
+.panel{border:1.5px solid var(--ink);border-radius:18px;background:var(--card);padding:20px;display:flex;flex-direction:column;gap:16px}
+.crumbs{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.back{border:1.5px solid var(--ink);background:var(--paper);border-radius:999px;padding:6px 14px;font-weight:700}
+.lesson h3{font-size:1.45rem;margin-bottom:8px}
+.lesson p{max-width:62ch}
+.lesson.fact{background:var(--gold-soft);border-radius:14px;padding:16px}
+.dots{display:flex;gap:6px;flex-wrap:wrap}
+.dots span{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.dots span.on{background:var(--mint)}
+.btn{border:1.5px solid var(--ink);border-radius:12px;padding:10px 18px;font-weight:700;background:var(--paper)}
+.btn.primary{background:var(--mint);border-color:var(--mint);color:var(--onaccent)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.answers{display:grid;gap:10px}
+.ans{text-align:left;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--paper)}
+.ans:hover:not(:disabled){border-color:var(--ink)}
+.ans.right{border-color:var(--mint);background:var(--mint-soft);font-weight:700}
+.ans.wrong{border-color:var(--red);background:var(--red-soft)}
+.ans:disabled{cursor:default}
+.expl{border-left:4px solid var(--mint);padding:8px 12px;background:var(--paper);border-radius:0 10px 10px 0}
+.expl.bad{border-left-color:var(--red)}
+
+/* Werkzeuge */
+.tool{display:grid;gap:14px}
+.sliders{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px 18px}
+.sl{display:flex;flex-direction:column;gap:4px;min-width:0}
+.sl label{display:flex;justify-content:space-between;gap:8px;font-size:.92rem}
+.sl label b{font-family:var(--f-num)}
+input[type=range]{width:100%;accent-color:var(--mint)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--paper)}
+.kpi b{display:block;font-family:var(--f-num);font-size:1.25rem;font-variant-numeric:tabular-nums}
+.kpi.hl{border-color:var(--mint)}
+canvas{width:100%;height:240px;display:block}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.legend span::before{content:"";display:inline-block;width:14px;height:4px;border-radius:2px;margin-right:6px;vertical-align:middle;background:var(--k)}
+.ledger{display:grid;grid-template-columns:1fr 1fr;border:1.5px solid var(--ink);border-radius:12px;overflow:hidden}
+.ledger > div{padding:12px;min-width:0}
+.ledger > div + div{border-left:1.5px solid var(--ink)}
+.ledger h4{margin:0 0 6px;font-family:var(--f-display);font-size:1rem}
+.ledger .line{display:flex;justify-content:space-between;gap:8px;font-size:.92rem;padding:3px 0;border-bottom:1px dashed var(--line)}
+.ledger .line b{font-family:var(--f-num);font-weight:600}
+.sort{display:grid;gap:8px}
+.sort .it{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--paper)}
+.sort .it.ok{border-color:var(--mint)}
+.sort .it.no{border-color:var(--red)}
+.sort .it small{display:block;color:var(--muted);font-size:.85rem}
+.mini{border:1.5px solid var(--ink);border-radius:999px;padding:4px 12px;background:var(--card);font-size:.9rem;font-weight:700}
+
+/* Simulator */
+.alloc{display:grid;gap:10px}
+.al{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:4px 14px;align-items:center;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--paper)}
+.al.locked{opacity:.55;border-style:dashed}
+.al .nm{min-width:0}
+.al .nm small{display:block;color:var(--muted);font-size:.84rem}
+.al .pc{font-family:var(--f-num);text-align:right}
+.al input{grid-column:1/-1}
+#simCtl{display:grid;gap:12px}
+.al .trade{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center}
+.al .trade .grp{display:flex;gap:6px;align-items:center}
+.al .amt{width:96px;border:1.5px solid var(--ink);border-radius:999px;padding:4px 12px;background:var(--card);font:inherit;font-size:.9rem;font-family:var(--f-num)}
+.al .amt:disabled{opacity:.4}
+.mini[aria-pressed="true"]{background:var(--mint);border-color:var(--mint);color:var(--onaccent)}
+.bars{display:grid;gap:8px}
+.bar{display:grid;grid-template-columns:150px minmax(0,1fr) 92px;gap:10px;align-items:center;font-size:.92rem}
+.bar i{display:block;height:16px;border-radius:8px;background:var(--c);min-width:2px;transition:width .2s ease}
+.bar b{font-family:var(--f-num);text-align:right;font-weight:600;white-space:nowrap}
+@media (max-width:520px){.bar{grid-template-columns:1fr auto}.bar i{grid-column:1/-1;grid-row:2}}
+.mini:disabled{opacity:.4;cursor:not-allowed}
+.gain{color:var(--mint)} .loss{color:var(--red)}
+.info{border:1.5px solid var(--line);border-radius:12px;padding:10px 14px;background:var(--paper)}
+.info summary{cursor:pointer;font-weight:700}
+.info ul{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
+.info p{margin-top:8px}
+.src{font-size:.9rem}
+.src a{overflow-wrap:anywhere}
+.seg{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.seg .label{margin-right:4px}
+.seg button{border:1.5px solid var(--ink);border-radius:999px;padding:4px 14px;background:var(--card);font-size:.9rem;font-weight:700}
+.seg button[aria-pressed="true"]{background:var(--mint);border-color:var(--mint);color:var(--onaccent)}
+.seg button:disabled{opacity:.45;cursor:not-allowed}
+.seg small{flex-basis:100%;font-size:.84rem;color:var(--muted)}
+.news{font-family:var(--f-num);font-size:.85rem;max-height:170px;overflow:auto;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--paper);display:flex;flex-direction:column;gap:4px}
+.news .bad{color:var(--red)} .news .good{color:var(--mint)}
+.tbl{width:100%;border-collapse:collapse;font-size:.92rem}
+.tbl td,.tbl th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:right}
+.tbl td:first-child,.tbl th:first-child{text-align:left}
+.tbl .num{white-space:nowrap}
+.tblwrap{overflow-x:auto}
+.result-stars{font-size:2rem;color:var(--gold);letter-spacing:6px}
+.result-stars i{font-style:normal;color:var(--line)}
+footer{font-size:.85rem;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+@media (max-width:520px){
+  .ledger{grid-template-columns:1fr}
+  .ledger > div + div{border-left:0;border-top:1.5px solid var(--ink)}
+  .moni.big{width:80px;height:80px}
+  .al{grid-template-columns:minmax(0,1fr) 90px}
+}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+<style>
+/* Nur in der App: Abstand zu Notch, Kamera-Loch und Home-Leiste; kein Zoom-Flackern beim Antippen */
+.app{padding-top:max(16px,env(safe-area-inset-top));padding-left:max(16px,env(safe-area-inset-left));
+  padding-right:max(16px,env(safe-area-inset-right));padding-bottom:max(48px,calc(env(safe-area-inset-bottom) + 24px))}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+button,a,summary,label{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+</style>
+
+
+<div class="app">
+  <header class="top">
+    <button class="brand" id="home" aria-label="Zur Karte">
+      <span id="moniTop"></span>
+      <span><h1>What's money?</h1><small>Moni will sein Geld klug anlegen – und lernt dafür alles über Geld.</small></span>
+    </button>
+    <div class="wallet" id="wallet"></div>
+  </header>
+  <main id="view"></main>
+  <footer>
+    <p>Lernspiel, keine Anlageberatung. Zahlen mit Stand Herbst 2026; die Renditen im Simulator sind grobe Spielannahmen nach historischen Schwankungen, keine Prognose.</p>
+    <p>Quellen: Unter den Lernkarten jeder Station und unter dem Simulator findest du aufklappbar, woher die Informationen stammen.</p>
+  </footer>
+</div>
+
+<script>
+/* ---------- Inhalte ---------- */
+const STATIONS = [
+{ id:'tausch',
+  src:[["Wikipedia: Tauschhandel", "https://de.wikipedia.org/wiki/Tauschhandel"], ["Wikipedia: Geldfunktion", "https://de.wikipedia.org/wiki/Geldfunktion"], ["Wikipedia: Warengeld", "https://de.wikipedia.org/wiki/Warengeld"], ["Wikipedia: Kaurigeld", "https://de.wikipedia.org/wiki/Kaurigeld"], ["Wikipedia: Rai (Steingeld von Yap)", "https://de.wikipedia.org/wiki/Rai_(Währung)"], ["Wikipedia: Zigarettenwährung", "https://de.wikipedia.org/wiki/Zigarettenwährung"], ["Wikipedia: Währungsreform 1948", "https://de.wikipedia.org/wiki/Währungsreform_1948_(Westdeutschland)"]], name:'Tauschmarkt', topic:'Was alles schon Geld war',
+  moni:'Ich hab 1.000 € gespart. Aber bevor ich irgendwas anlege: Was <b>ist</b> Geld eigentlich? Fangen wir ganz vorne an – bei Leuten, die gar keins hatten.',
+  cards:[
+   ['Tauschen ist mühsam','Ohne Geld musst du jemanden finden, der genau das hat, was du willst – und der gleichzeitig genau das will, was du hast. Fachleute nennen das die „doppelte Übereinstimmung der Wünsche“. Meist klappt das nicht. Deshalb haben Menschen überall auf der Welt Geld erfunden.', "Stell dir vor, du hast Äpfel und willst Schuhe. Dann musst du jemanden finden, der Schuhe hat <b>und</b> gerade Äpfel braucht. Das ist ganz schön schwer! Deshalb haben Menschen überall auf der Welt Geld erfunden."],
+   ['Drei Jobs für Geld','Geld ist <b>Tauschmittel</b> (man bezahlt damit), <b>Recheneinheit</b> (man vergleicht damit Preise) und <b>Wertaufbewahrung</b> (man kann es für später behalten). Alles, was diese drei Jobs gut genug erledigt, kann Geld sein.', "Geld hat drei Aufgaben: Man kann damit <b>bezahlen</b>. Man kann damit <b>vergleichen</b>, was teuer und was billig ist. Und man kann es <b>aufheben</b>, um später etwas zu kaufen."],
+   ['Kühe, Salz und Kakao','Vieh war eines der ältesten Zahlungsmittel – lateinisch <i>pecus</i>, daraus wurde <i>pecunia</i>, das Geld. Römische Soldaten bekamen Geld für Salz, das <i>salarium</i> – unser „Salär“. Die Azteken zahlten mit Kakaobohnen, in Tibet und China nutzte man gepresste Teeziegel, in Virginia im 17. Jahrhundert Tabak.', "Früher waren Kühe Geld. Auf Lateinisch heißt Vieh <i>pecus</i> – daraus wurde <i>pecunia</i>, das Geld. Römische Soldaten bekamen Geld für Salz, die Azteken bezahlten mit Kakaobohnen."],
+   ['Muscheln als Weltwährung','Kaurischnecken waren über Jahrtausende in Afrika, Indien und China Geld: haltbar, handlich, schwer zu fälschen, leicht zu zählen. Das chinesische Schriftzeichen für Wert und Handel (貝) zeigt bis heute eine Muschel.'],
+   ['Steine, die nie bewegt wurden','Auf der Pazifikinsel Yap gibt es Rai-Steine: Scheiben bis zu 4 Meter groß. Weil man sie kaum tragen kann, wechselte nur der Besitz – per Absprache. Ein Stein soll beim Transport im Meer versunken sein und galt trotzdem weiter als Vermögen. Geld kann also auch nur eine gemeinsame Erinnerung sein, wem was gehört.'],
+   ['Zigaretten statt Reichsmark','In Deutschland war von 1945 bis 1948 die Reichsmark fast wertlos. Auf dem Schwarzmarkt bezahlte man mit Zigaretten. Das endete am 20. Juni 1948 mit der Währungsreform und der D-Mark.', "Nach dem Zweiten Weltkrieg war das deutsche Geld fast nichts mehr wert. Da bezahlten viele Leute mit Zigaretten. 1948 kam neues Geld: die D-Mark."],
+   ['Was gutes Geld braucht','Haltbar, teilbar, leicht zu tragen, knapp, überall gleich und schwer zu fälschen. Muscheln, Metalle, Papier und Zahlen im Computer haben diese Eigenschaften unterschiedlich gut erfüllt – deshalb hat sich Geld immer wieder verändert.']
+  ],
+  fact:'Auf Yap werden Rai-Steine bis heute bei Hochzeiten und Zeremonien verschenkt – obwohl dort im Alltag mit US-Dollar bezahlt wird.',
+  quiz:[
+   ['Woher kommt das lateinische Wort <i>pecunia</i> (Geld)?',['Von <i>pecus</i> – Vieh','Von der Stadt Peking','Vom Vogel, der Körner pickt','Von <i>pix</i> – Pech'],0,'Vieh war eines der ersten Zahlungsmittel. Aus <i>pecus</i> wurde <i>pecunia</i>.'],
+   ['Was gehört NICHT zu den drei Aufgaben von Geld?',['Tauschmittel','Recheneinheit','Wertaufbewahrung','Glück bringen'],3,'Tauschmittel, Recheneinheit, Wertaufbewahrung – das sind die drei Jobs.', ["Was gehört NICHT zu den Aufgaben von Geld?", ["Bezahlen", "Preise vergleichen", "Für später aufheben", "Glück bringen"], 3, "Bezahlen, vergleichen, aufheben – das sind die drei Jobs von Geld."]],
+   ['Womit wurde in Deutschland 1946 auf dem Schwarzmarkt oft bezahlt?',['Mit Kaurimuscheln','Mit Zigaretten','Mit Teeziegeln','Mit Goldbarren'],1,'Die Reichsmark war kaum etwas wert, Zigaretten wurden zur Ersatzwährung – bis zur Währungsreform 1948.'],
+   ['Was ist das Besondere an den Rai-Steinen von Yap?',['Sie sind aus purem Gold','Man konnte sie essen','Sie blieben liegen – nur der Besitz wechselte per Absprache','Sie durften nur Kinder benutzen'],2,'Der Stein bewegt sich nicht, nur die Information, wem er gehört. Ganz ähnlich wie heute Geld auf Konten.']
+  ]},
+{ id:'markt',
+  src:[["Wikipedia: Preisbildung", "https://de.wikipedia.org/wiki/Preisbildung"], ["Wikipedia: Angebot und Nachfrage", "https://de.wikipedia.org/wiki/Angebot_und_Nachfrage"], ["Wikipedia: Marktgleichgewicht", "https://de.wikipedia.org/wiki/Marktgleichgewicht"], ["Wikipedia: Unsichtbare Hand", "https://de.wikipedia.org/wiki/Unsichtbare_Hand"], ["Wikipedia: Marktwirtschaft", "https://de.wikipedia.org/wiki/Marktwirtschaft"], ["Wikipedia: Marktversagen", "https://de.wikipedia.org/wiki/Marktversagen"], ["Wikipedia: Bundeskartellamt", "https://de.wikipedia.org/wiki/Bundeskartellamt"], ["Wikipedia: Zentralverwaltungswirtschaft (Planwirtschaft)", "https://de.wikipedia.org/wiki/Zentralverwaltungswirtschaft"], ["Wikipedia: Fünfjahresplan", "https://de.wikipedia.org/wiki/Fünfjahresplan"], ["Wikipedia: Gosplan", "https://de.wikipedia.org/wiki/Gosplan"], ["Wikipedia: Mangelwirtschaft", "https://de.wikipedia.org/wiki/Mangelwirtschaft"], ["Wikipedia: Konsumgüterproduktion in der DDR (Wartezeit auf Autos)", "https://de.wikipedia.org/wiki/Konsumgüterproduktion_in_der_DDR"], ["Wikipedia: Verfügbarkeit von Pkw in der DDR", "https://de.wikipedia.org/wiki/Verfügbarkeit_von_Pkw_in_der_DDR"], ["Berliner Zeitung: Sargnägel für die DDR – die Preispolitik", "https://www.berliner-zeitung.de/article/sargnaegel-fuer-die-ddr-die-preispolitik-trieb-skurrile-blueten-reform-unmoeglich-318440"], ["Wikipedia: Soziale Marktwirtschaft", "https://de.wikipedia.org/wiki/Soziale_Marktwirtschaft"], ["Wikipedia: Ludwig Erhard", "https://de.wikipedia.org/wiki/Ludwig_Erhard"], ["bpb: Kleine Ereignisgeschichte der Währungsreform 1948", "https://www.bpb.de/apuz/271679/kleine-ereignisgeschichte-der-waehrungsreform-1948"], ["Wikipedia: Höchstpreis", "https://de.wikipedia.org/wiki/Höchstpreis"], ["Wikipedia: Mindestpreis", "https://de.wikipedia.org/wiki/Mindestpreis"], ["Wikipedia: Butterberg", "https://de.wikipedia.org/wiki/Butterberg"], ["Wikipedia: Mietpreisbremse", "https://de.wikipedia.org/wiki/Mietpreisbremse"], ["Wikipedia: Mindestlohn", "https://de.wikipedia.org/wiki/Mindestlohn"], ["Limonaden-Spiel: ausgedachte Zahlen zum Ausprobieren", null]], name:'Marktplatz', topic:'Angebot, Nachfrage und wer die Preise macht', extra:'markt',
+  moni:'Warum kosten Erdbeeren im Winter so viel mehr als im Sommer? Und wer bestimmt eigentlich, was etwas kostet – der Verkäufer, der Staat oder wir alle zusammen?',
+  cards:[
+   ['Was ist ein Markt?','Ein Markt ist überall dort, wo Käufer und Verkäufer zusammenkommen: auf dem Wochenmarkt, im Supermarkt, im Internet oder an der Börse. Alle, die etwas kaufen wollen, bilden die <b>Nachfrage</b>. Alle, die etwas verkaufen wollen, bilden das <b>Angebot</b>.', "Ein Markt ist überall dort, wo jemand etwas verkauft und jemand anderes etwas kauft – auf dem Wochenmarkt, im Supermarkt oder im Internet. Wer kaufen will, ist die <b>Nachfrage</b>. Wer verkaufen will, ist das <b>Angebot</b>."],
+   ['Wie ein Preis entsteht','Wollen viele etwas haben, das knapp ist, steigt der Preis. Gibt es mehr davon, als die Leute wollen, sinkt er. Irgendwo dazwischen treffen sich Angebot und Nachfrage: beim <b>Marktpreis</b>. Zu diesem Preis wird genau so viel verkauft, wie gekauft werden soll.', "Im Sommer gibt es viele Erdbeeren – dann sind sie billig. Im Winter gibt es kaum welche, aber manche Leute wollen trotzdem Erdbeeren – dann sind sie teuer. Gibt es wenig von etwas, das viele wollen, steigt der Preis. Gibt es viel davon, sinkt er."],
+   ['Preise sind Signale','Ein hoher Preis sagt den Herstellern: Davon wird mehr gebraucht, es lohnt sich, mehr herzustellen. Ein niedriger Preis sagt: Davon gibt es genug. So steuern Millionen Preise, was hergestellt wird – ohne dass jemand alles planen muss. Der Ökonom Adam Smith beschrieb das 1776 mit dem Bild der „unsichtbaren Hand“.', "Ein hoher Preis ist wie ein Zeichen: „Davon brauchen wir mehr!“ Dann stellen Firmen mehr davon her, weil sie damit gut verdienen. Ein niedriger Preis sagt: „Davon gibt es genug.“"],
+   ['Marktwirtschaft','In einer <b>Marktwirtschaft</b> entscheiden Firmen und Menschen selbst, was sie herstellen, kaufen und verkaufen. Es gibt privates Eigentum, Wettbewerb und freie Preise. Wer gute Produkte günstig anbietet, gewinnt Kunden. Der Markt hat aber Schwächen: Ohne Regeln können Monopole entstehen, die Umwelt kommt zu kurz, und wer nicht arbeiten kann, steht ohne Hilfe da. Fachleute sprechen von <b>Marktversagen</b>.', "In einer <b>Marktwirtschaft</b> entscheiden die Leute selbst, was sie herstellen und kaufen. Die Preise bilden sich von allein. Wer gute Sachen günstig verkauft, bekommt viele Kunden. Aber ganz ohne Regeln geht es nicht – sonst wird zum Beispiel die Umwelt verschmutzt."],
+   ['Planwirtschaft','In einer <b>Planwirtschaft</b> legt eine staatliche Behörde fest, was hergestellt wird, wie viel davon und zu welchem Preis – oft in Fünfjahresplänen. Die Betriebe gehören dem Staat. So war es in der Sowjetunion und in der DDR. Das Problem: Keine Behörde weiß, was Millionen Menschen gerade brauchen. Und weil die Preise festgelegt sind, zeigen sie nicht an, wo etwas fehlt.', "In einer <b>Planwirtschaft</b> bestimmt der Staat, was hergestellt wird, wie viel und was es kostet. So war es zum Beispiel in der DDR. Das Problem: Niemand kann für Millionen Menschen planen, was sie brauchen. Darum fehlte oft etwas."],
+   ['Alltag in der DDR','Brot, Mieten und Strom waren in der DDR sehr billig, weil der Staat viel dazuzahlte. Brot und Haferflocken kosteten teils weniger als Tierfutter – also verfütterten manche sie an Hühner und Kaninchen. Anderes fehlte: Auf einen neuen Pkw wartete man bis zu 18 Jahre, und für viele Waren stand man Schlange. Man nennt das <b>Mangelwirtschaft</b>.', "In der DDR waren Brot und Mieten sehr billig, weil der Staat dazubezahlte. Brot war sogar billiger als Tierfutter – darum bekamen manche Hühner Brot zu fressen! Auf ein neues Auto musste man dafür bis zu 18 Jahre warten."],
+   ['Soziale Marktwirtschaft','Deutschland liegt dazwischen. Seit 1948 gilt die <b>Soziale Marktwirtschaft</b>, geprägt von Ludwig Erhard: Die Preise bilden sich grundsätzlich am Markt, aber der Staat setzt Regeln. Das Bundeskartellamt verhindert Monopole, es gibt Umweltgesetze, Sozialversicherungen, einen Mindestlohn und die Mietpreisbremse. Wie stark der Staat eingreifen soll, darüber wird bis heute gestritten.', "Deutschland hat eine <b>Soziale Marktwirtschaft</b>: Die Preise bilden sich meistens am Markt, aber der Staat passt auf. Er sorgt zum Beispiel dafür, dass keine Firma alles allein bestimmen kann, dass die Umwelt geschützt wird und dass Menschen Hilfe bekommen, wenn sie krank oder arbeitslos sind."],
+   ['Wenn der Staat Preise festlegt','Ein <b>Höchstpreis</b> unter dem Marktpreis soll etwas billig machen. Dann wollen mehr Leute kaufen, aber weniger lohnt sich herzustellen – es wird knapp. Ein <b>Mindestpreis</b> über dem Marktpreis bewirkt das Gegenteil: Es wird mehr hergestellt als gekauft. Weil die Europäische Gemeinschaft Bauern feste Abnahmepreise garantierte, entstanden in den 1970er- und 80er-Jahren riesige „Butterberge“ und „Milchseen“.', "Legt der Staat einen Preis fest, kann das schiefgehen. Ist der Preis zu niedrig, wollen alle kaufen, aber kaum jemand will verkaufen – dann wird es knapp. Ist er zu hoch, bleibt viel übrig. Vor etwa 40 Jahren lagen in Europa deshalb riesige „Butterberge“ in den Lagerhallen."]
+  ],
+  fact:'Am 20. Juni 1948 kam die D-Mark, und Ludwig Erhard gab viele Preise frei. Am nächsten Tag waren die Schaufenster plötzlich voll: Händler hatten Waren zurückgehalten, weil sie für die alte Reichsmark nichts bekommen hätten. Die Preise stiegen danach allerdings kräftig.',
+  quiz:[
+   ['Viele wollen etwas kaufen, aber es gibt nur wenig davon. Was passiert meist mit dem Preis?',['Er sinkt','Er steigt','Er bleibt gleich','Die Ware wird verboten'],1,'Knappheit plus hohe Nachfrage treibt den Preis nach oben.'],
+   ['Wer bestimmt in einer Planwirtschaft, was und wie viel hergestellt wird?',['Die Käufer','Eine staatliche Planbehörde','Die Börse','Niemand'],1,'Der Staat plant Mengen und Preise – oft für fünf Jahre im Voraus.', ["Wer entscheidet in einer Marktwirtschaft, was hergestellt wird?", ["Ein einziger Chef im Staat", "Die Firmen und Käufer selbst", "Der Zufall", "Die Schule"], 1, "Firmen stellen her, was Leute kaufen wollen – die Preise zeigen es ihnen."]],
+   ['Der Staat legt einen Höchstpreis unter dem Marktpreis fest. Was ist die typische Folge?',['Es bleibt viel übrig','Knappheit und Warteschlangen','Alles wird besser und billiger','Nichts'],1,'Mehr Leute wollen kaufen, weniger lohnt sich herzustellen.', ["Wie lange musste man in der DDR auf ein neues Auto warten?", ["Eine Woche", "Ein Jahr", "Bis zu 18 Jahre", "Gar nicht"], 2, "Autos waren knapp – die Wartelisten waren endlos."]],
+   ['Wie heißt die Wirtschaftsordnung in Deutschland?',['Planwirtschaft','Soziale Marktwirtschaft','Tauschwirtschaft','Marktwirtschaft ganz ohne Regeln'],1,'Freie Preise, aber mit Regeln und sozialer Absicherung.', ["Brot war in der DDR billiger als Tierfutter. Was passierte?", ["Alle aßen mehr Gemüse", "Manche fütterten ihre Hühner mit Brot", "Brot wurde verboten", "Nichts"], 1, "Wenn Preise nicht stimmen, machen Menschen seltsame Dinge."]]
+  ]},
+{ id:'gold',
+  src:[["Wikipedia: Lydien", "https://de.wikipedia.org/wiki/Lydien"], ["Wikipedia: Kroisos", "https://de.wikipedia.org/wiki/Kroisos"], ["World Gold Council: Above-ground stocks (englisch)", "https://www.gold.org/goldhub/data/above-ground-stocks"], ["Wikipedia: Taler", "https://de.wikipedia.org/wiki/Taler"], ["Wikipedia: Denar", "https://de.wikipedia.org/wiki/Denar"], ["Wikipedia: Solidus", "https://de.wikipedia.org/wiki/Solidus"], ["Wikipedia: Solidus (englisch)", "https://en.wikipedia.org/wiki/Solidus_(coin)"], ["Wikipedia: Dukat", "https://de.wikipedia.org/wiki/Dukat"], ["Wikipedia: Goldstandard", "https://de.wikipedia.org/wiki/Goldstandard"], ["Wikipedia: Bretton-Woods-System", "https://de.wikipedia.org/wiki/Bretton-Woods-System"], ["Wikipedia: Nixon-Schock", "https://de.wikipedia.org/wiki/Nixon-Schock"], ["Wikipedia: Unze", "https://de.wikipedia.org/wiki/Unze"], ["Wikipedia: Bimetallism – Gold-Silber-Verhältnis früher (englisch)", "https://en.wikipedia.org/wiki/Bimetallism"], ["Wikipedia: Silver as an investment – Gold-Silber-Verhältnis heute (englisch)", "https://en.wikipedia.org/wiki/Silver_as_an_investment"]], name:'Goldmine', topic:'Die Geschichte von Gold und Silber',
+  moni:'Gold glänzt, das weiß ich. Aber warum haben sich ausgerechnet Gold und Silber als Geld durchgesetzt?',
+  cards:[
+   ['Die ersten Münzen','Um 600 v. Chr. prägte man in Lydien (heute Westtürkei) die ersten bekannten Münzen – aus Elektron, einer natürlichen Mischung aus Gold und Silber. König Krösus ließ dann Münzen aus reinem Gold und reinem Silber schlagen. Daher kommt „reich wie Krösus“.', "Vor über 2.600 Jahren gab es in Lydien (heute in der Türkei) die ersten Münzen. König Krösus war dort so reich, dass man bis heute sagt: „reich wie Krösus“."],
+   ['Warum gerade Gold?','Gold rostet nicht, ist selten, lässt sich teilen und formen und sieht schön aus. Bis Ende 2025 wurden laut World Gold Council rund <b>220.700 Tonnen</b> gefördert – zusammengeschmolzen ein Würfel von gut 22 Metern Kantenlänge. Fast alles davon existiert noch.', "Gold rostet nicht, ist selten und glänzt schön. Alles Gold, das Menschen je aus der Erde geholt haben, passt in einen Würfel, der etwa so hoch ist wie ein Haus mit sieben Stockwerken."],
+   ['Silber für den Alltag','Für kleine Einkäufe war Silber oft wichtiger: der römische Denar, der Pfennig, das englische Pfund (ursprünglich ein Pfund Silber). Ab 1520 prägte man im böhmischen Joachimsthal den „Joachimsthaler“ – kurz Taler. Daraus wurde das Wort <b>Dollar</b>.', "Für kleine Einkäufe gab es Silbermünzen. Eine berühmte hieß „Taler“. Aus diesem Wort wurde später <b>Dollar</b>."],
+   ['Die erste Inflation','Römische Kaiser mischten immer mehr Kupfer in den Denar, um mehr Münzen aus demselben Silber zu machen. Im 3. Jahrhundert steckte kaum noch Silber drin. Mehr Münzen, weniger Wert – die Preise stiegen. Das Prinzip hat sich bis heute nicht geändert.', "Römische Kaiser mischten immer mehr billiges Kupfer in ihre Silbermünzen, um mehr Münzen zu machen. Die Leute merkten das – und die Preise stiegen. Mehr Geld, das weniger wert ist: Das nennt man <b>Inflation</b>."],
+   ['Die stabilste Münze der Geschichte','Um 312 n. Chr. führte Kaiser Konstantin eine neue Goldmünze ein: den <b>Solidus</b> mit rund 4,5 Gramm Gold. Etwa 700 Jahre lang blieb er fast genau gleich schwer und rein – kaum eine Münze hat das je geschafft. Warum? Nur der Kaiser durfte ihn prägen, jeder konnte das Gewicht nachprüfen, und Steuern wurden in Gold bezahlt. Erst als der Staat im 11. Jahrhundert Geld brauchte, kam weniger Gold hinein – und das Vertrauen ging verloren. Fast so lange hielt der <b>Dukat</b> aus Venedig: von 1284 bis 1797.', "Vor etwa 1.700 Jahren ließ ein römischer Kaiser eine Goldmünze prägen: den <b>Solidus</b>. 700 Jahre lang steckte darin immer gleich viel Gold. Darum vertrauten ihm die Menschen – sogar in fernen Ländern. Erst als der Staat Geld brauchte, mischte er weniger Gold hinein."],
+   ['Papier mit Goldversprechen','Im 19. Jahrhundert banden viele Länder ihr Papiergeld an Gold (das Deutsche Reich ab 1871/73). Eine Banknote war ein Versprechen: Diesen Schein kannst du bei der Notenbank gegen Gold tauschen.', "Später gab es Papiergeld. Jeder Schein war ein Versprechen: Diesen Schein kannst du bei der Bank gegen Gold eintauschen."],
+   ['Das Ende der Goldbindung','1944 wurde in Bretton Woods beschlossen: Der Dollar ist an Gold gebunden (35 $ je Unze), die anderen Währungen an den Dollar. Am 15. August 1971 beendete US-Präsident Nixon den Goldumtausch. Seitdem ist keine große Währung mehr durch Gold gedeckt.', "Seit 1971 kann man Dollar nicht mehr gegen Gold tauschen. Hinter keinem großen Geld steckt heute noch Gold – sondern Vertrauen."],
+   ['Gewicht in Feinunzen','Edelmetalle werden in Feinunzen gehandelt: 1 Feinunze = 31,1035 Gramm reines Metall. Achtung: Die normale Unze aus dem Alltag wiegt nur 28,35 Gramm.', null]
+  ],
+  fact:'Das Verhältnis von Gold zu Silber lag in Antike und Mittelalter oft bei etwa 1:12 bis 1:15. Heute muss man meist 50 bis 100 Unzen Silber für eine Unze Gold zahlen.',
+  quiz:[
+   ['Wo entstanden um 600 v. Chr. die ersten bekannten Münzen aus Edelmetall?',['In Ägypten','In Lydien','In Rom','In Skandinavien'],1,'In Lydien – Krösus war dort König.'],
+   ['Woher kommt das Wort „Dollar“?',['Vom „Joachimsthaler“, einer böhmischen Silbermünze','Von „Dolly“, einem Spitznamen','Vom englischen „dull“','Aus dem Spanischen „dolor“'],0,'Joachimsthaler → Taler → Dollar.'],
+   ['Was geschah am 15. August 1971?',['Der Euro wurde eingeführt','Die USA beendeten den Umtausch von Dollar in Gold','Gold wurde verboten','Die erste Börse eröffnete'],1,'Damit endete das System von Bretton Woods.', ["Was steckt heute hinter Dollar und Euro?", ["Gold", "Silber", "Vertrauen", "Kühe"], 2, "Seit 1971 ist kein großes Geld mehr an Gold gebunden."]],
+   ['Wie viel wiegt eine Feinunze?',['28,35 g','31,1 g','100 g','1 kg'],1,'31,1035 Gramm. Die 28,35 g sind die gewöhnliche Unze.', ["Warum war Gold so beliebt als Geld?", ["Weil es leicht ist", "Weil es nicht rostet und selten ist", "Weil man es essen kann", "Weil es überall herumliegt"], 1, "Gold hält ewig und ist knapp – perfekt, um Wert aufzubewahren."]]
+  ]},
+{ id:'bank',
+  src:[["Wikipedia: Bankrott", "https://de.wikipedia.org/wiki/Bankrott"], ["Wikipedia: Monte dei Paschi di Siena", "https://de.wikipedia.org/wiki/Banca_Monte_dei_Paschi_di_Siena"], ["Wikipedia: Einlagensicherung", "https://de.wikipedia.org/wiki/Einlagensicherung"], ["Wikipedia: Bankansturm", "https://de.wikipedia.org/wiki/Bankansturm"], ["Wikipedia: Zentralbank", "https://de.wikipedia.org/wiki/Zentralbank"]], name:'Die Bank', topic:'Was Banken eigentlich machen',
+  moni:'Mein Geld liegt auf der Bank. Aber was macht die Bank damit, während ich nicht hinschaue?',
+  cards:[
+   ['Ein Tisch und ein Bruch','„Bank“ kommt vom italienischen <i>banco</i>, dem Tisch der Geldwechsler im Mittelalter. Konnte ein Wechsler nicht zahlen, wurde sein Tisch zerschlagen: <i>banca rotta</i> – daraus wurde „bankrott“.'],
+   ['Alte Bankhäuser','Die Medici in Florenz und die Fugger in Augsburg finanzierten Päpste und Kaiser. Die älteste heute noch tätige Bank ist die Monte dei Paschi di Siena, gegründet 1472.', null],
+   ['Das Geschäft der Bank','Banken führen Konten, wickeln Zahlungen ab, vergeben Kredite und legen Geld an. Sie verdienen vor allem an der <b>Zinsdifferenz</b>: Für Kredite nehmen sie mehr Zinsen, als sie Sparern zahlen. Dazu kommen Gebühren.', "Banken passen auf dein Geld auf, überweisen es und verleihen Geld. Wer sich Geld leiht, zahlt dafür <b>Zinsen</b>. Wer spart, bekommt Zinsen – aber weniger. Den Unterschied behält die Bank."],
+   ['Zwei Sorten Banken','Du hast dein Konto bei einer <b>Geschäftsbank</b> – Sparkasse, Volksbank, Direktbank. Die Geschäftsbanken haben wiederum Konten bei der <b>Zentralbank</b>. Für den Euro ist das die Europäische Zentralbank (EZB) mit den nationalen Notenbanken, in Deutschland die Bundesbank.', "Deine Bank ist zum Beispiel die Sparkasse. Und auch Banken haben eine Bank: die <b>Zentralbank</b>. Für den Euro ist das die Europäische Zentralbank (EZB) in Frankfurt."],
+   ['Wenn eine Bank pleitegeht','In der EU sind Guthaben bis <b>100.000 € pro Person und Bank</b> gesetzlich geschützt (Einlagensicherung). Wertpapiere im Depot gehören ohnehin dir und nicht der Bank.', "Geht eine Bank pleite, ist dein Geld trotzdem sicher – bis 100.000 €. Das steht im Gesetz."],
+   ['Der Bank Run','Wollen alle Kunden gleichzeitig ihr Geld abheben, hat keine Bank genug Bargeld da – denn das meiste Geld existiert nur als Zahl auf Konten. Beispiele: Deutschland 1931, Northern Rock in England 2007, Silicon Valley Bank in den USA 2023.', "Wenn alle Kunden gleichzeitig ihr Geld abholen wollen, hat die Bank nicht genug Scheine im Tresor. Denn das meiste Geld ist nur eine Zahl im Computer. Das nennt man <b>Bank Run</b>."]
+  ],
+  fact:'Die Einlagensicherung gilt pro Bank. Wer mehr als 100.000 € hat, kann das Geld auf mehrere Banken verteilen.',
+  quiz:[
+   ['Woher kommt das Wort „bankrott“?',['Von <i>banca rotta</i> – der zerbrochene Tisch','Von „Bank“ und „rot“ wie rote Zahlen','Vom Bankräuber Rott','Vom englischen „bank route“'],0,'Der Tisch eines zahlungsunfähigen Wechslers wurde zerschlagen.'],
+   ['Bis zu welchem Betrag sind Bankguthaben in der EU gesetzlich gesichert?',['10.000 €','100.000 €','1 Million €','Unbegrenzt'],1,'100.000 € pro Person und Bank.'],
+   ['Womit verdienen Banken klassisch ihr Geld?',['Mit dem Drucken von Banknoten','Mit der Zinsdifferenz zwischen Krediten und Sparzinsen','Mit Steuern','Mit dem Verkauf von Tresoren'],1,'Kreditzins minus Sparzins – das ist die Marge der Bank.'],
+   ['Wo haben Geschäftsbanken ihr Konto?',['Bei der Zentralbank','Beim Finanzamt','Bei der Börse','Nirgends'],0,'Darüber laufen auch Überweisungen zwischen verschiedenen Banken.']
+  ]},
+{ id:'schoepfung',
+  src:[["Deutsche Bundesbank: Monatsbericht April 2017 – Geldschöpfungsprozess (PDF)", "https://www.bundesbank.de/resource/blob/654284/df66c4444d065a7f519e2ab0c476df58/mL/2017-04-monatsbericht-data.pdf"], ["Bank of England: Money creation in the modern economy, 2014 (englisch)", "https://www.bankofengland.co.uk/quarterly-bulletin/2014/q1/money-creation-in-the-modern-economy"], ["Wikipedia: Geldschöpfung", "https://de.wikipedia.org/wiki/Geldschöpfung"], ["Wikipedia: Mindestreserve", "https://de.wikipedia.org/wiki/Mindestreserve"], ["Art. 123 AEUV (Verbot der Staatsfinanzierung)", "https://dejure.org/gesetze/AEUV/123.html"]], name:'Geldmaschine', topic:'Wie Geld entsteht', extra:'maschine',
+  moni:'Ich dachte immer, Geld wird gedruckt. Stimmt das überhaupt?',
+  cards:[
+   ['Zwei Arten von Geld','<b>Zentralbankgeld</b>: Bargeld und die Guthaben der Banken bei der Zentralbank. <b>Buchgeld</b>: das Guthaben auf deinem Girokonto. Buchgeld ist der weitaus größte Teil – von sieben Euro, mit denen im Euroraum täglich bezahlt werden kann, ist nur etwa einer Bargeld.', "Es gibt Geld zum Anfassen: <b>Bargeld</b>. Und Geld als Zahl auf dem Konto: <b>Buchgeld</b>. Von sieben Euro ist nur ungefähr einer Bargeld – der Rest ist eine Zahl im Computer."],
+   ['Ein Kredit erschafft Geld','Wenn eine Bank dir einen Kredit gibt, schreibt sie dir den Betrag einfach auf dein Konto. Sie nimmt das Geld nicht anderen Sparern weg – es entsteht in diesem Moment neu. So beschreiben es die Bundesbank (2017) und die Bank of England (2014).', "Leiht dir eine Bank Geld, schreibt sie die Zahl einfach auf dein Konto. Sie nimmt das Geld niemand anderem weg – es entsteht in diesem Moment neu. Klingt wie Zauberei, ist aber so."],
+   ['Tilgen lässt Geld verschwinden','Zahlst du den Kredit zurück, verschwindet das Buchgeld wieder. Fast jeder Euro auf einem Konto steht also irgendwo einer Schuld gegenüber.', "Zahlst du das geliehene Geld zurück, verschwindet es wieder. Fast jeder Euro auf einem Konto gehört also zu einer Schuld von irgendwem."],
+   ['Warum Banken nicht unendlich Geld machen','Banken brauchen genug <b>Eigenkapital</b> (Regeln nach Basel III), müssen <b>1 % Mindestreserve</b> bei der Zentralbank halten und brauchen Kunden, die einen Kredit zurückzahlen können. Und die Zentralbank bestimmt mit dem Leitzins, wie teuer das Ganze ist.', "Banken dürfen nicht unbegrenzt Geld verleihen. Es gibt strenge Regeln, und sie verleihen nur an Leute, die das Geld wahrscheinlich zurückzahlen können."],
+   ['Und das Bargeld?','Die Bundesbank lässt Banknoten im Auftrag der EZB drucken. In Umlauf kommen sie, wenn du am Automaten abhebst: Dein Buchgeld wird gegen Scheine getauscht. Mehr Geld entsteht dabei nicht.', "Die Scheine werden gedruckt. Hebst du am Automaten Geld ab, wird die Zahl auf deinem Konto kleiner und du bekommst Scheine. Mehr Geld hast du dadurch nicht."],
+   ['Und der Staat?','Staaten finanzieren sich über Steuern und Anleihen. Die EZB darf Staaten nicht direkt Geld leihen (Verbot der monetären Staatsfinanzierung, Art. 123 EU-Vertrag). Sie kauft aber zeitweise Staatsanleihen am Markt.', null]
+  ],
+  fact:'Der berühmte Satz „Banken verleihen das Geld der Sparer“ steht noch in vielen Schulbüchern. Die Bundesbank hat ihn 2017 ausdrücklich als zu einfach bezeichnet.',
+  quiz:[
+   ['Was passiert, wenn eine Bank einen Kredit vergibt?',['Sie nimmt das Geld von anderen Sparern','Es entsteht neues Buchgeld','Die Bundesbank druckt neue Scheine','Der Staat zahlt das Geld aus'],1,'Der Kreditbetrag wird gutgeschrieben – neues Buchgeld.'],
+   ['Was passiert, wenn der Kredit zurückgezahlt wird?',['Das Buchgeld verschwindet wieder','Das Geld geht an den Staat','Es wird in Gold getauscht','Nichts'],0,'Kreditschöpfung und Tilgung sind zwei Seiten derselben Buchung.'],
+   ['Welcher Teil des Geldes ist der größte?',['Bargeld','Buchgeld auf Konten','Münzen','Gold der Zentralbank'],1,'Etwa sechs von sieben Euro sind Buchgeld.'],
+   ['Wie hoch ist die Mindestreserve im Euroraum?',['0 %','1 %','10 %','50 %'],1,'Seit 2012 sind es 1 % bestimmter Einlagen.', ["Was ist Buchgeld?", ["Geld, das in Büchern liegt", "Geld als Zahl auf dem Konto", "Ein Buch über Geld", "Münzen"], 1, "Buchgeld steht auf Konten – es ist der größte Teil des Geldes."]]
+  ]},
+{ id:'system',
+  src:[["Wikipedia: Fiatgeld", "https://de.wikipedia.org/wiki/Fiatgeld"], ["Wikipedia: Euro", "https://de.wikipedia.org/wiki/Euro"], ["Wikipedia: Eurozone", "https://de.wikipedia.org/wiki/Eurozone"], ["Wikipedia: Deutsche Euromünzen", "https://de.wikipedia.org/wiki/Deutsche_Euromünzen"], ["EZB: Leitzinsen (englisch)", "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/key_ecb_interest_rates/html/index.en.html"], ["Destatis: Inflationsrate August 2026", "https://www.destatis.de/DE/Presse/Pressemitteilungen/2026/09/PD26_320_611.html"], ["Wikipedia: Deutsche Inflation 1914 bis 1923", "https://de.wikipedia.org/wiki/Deutsche_Inflation_1914_bis_1923"], ["Wikipedia: Rentenmark", "https://de.wikipedia.org/wiki/Rentenmark"], ["Wikipedia: Deflation", "https://de.wikipedia.org/wiki/Deflation"], ["Bordo, Landon-Lane, Redish: Good versus Bad Deflation, NBER 2004 (englisch)", "https://www.nber.org/papers/w10329"], ["Federal Reserve Bank of St. Louis: Die Weltwirtschaftskrise in Zahlen (englisch)", "https://www.stlouisfed.org/the-great-depression/curriculum/economic-episodes-in-american-history-part-3"], ["Federal Reserve Bank of St. Louis: Why 2 Percent? (englisch)", "https://www.stlouisfed.org/open-vault/2019/january/fed-inflation-target-2-percent"]], name:'Zentralbank', topic:'Das Geldsystem, Inflation und Zinsen',
+  easy:{ fact:'Die Euro-Scheine sehen in allen 21 Ländern gleich aus. Die Münzen zeigen auf einer Seite ein Motiv aus ihrem Land – in Deutschland den Bundesadler, das Brandenburger Tor oder einen Eichenzweig.' },
+  moni:'Wenn Geld nicht mehr an Gold hängt – woran hängt es dann? Und warum wird alles immer teurer?',
+  cards:[
+   ['Fiatgeld','„Fiat“ ist Latein und heißt „es werde“. Der Euro ist durch nichts gedeckt außer Vertrauen und Gesetz: Er ist gesetzliches Zahlungsmittel, und Steuern werden in Euro bezahlt. Darum will ihn jeder haben.', "„Fiat“ ist Latein und heißt „es werde“. Hinter dem Euro steckt kein Gold. Er funktioniert, weil alle ihm vertrauen und weil das Gesetz sagt: Damit wird bezahlt."],
+   ['Der Euro','Seit 1. Januar 1999 als Buchgeld, seit 1. Januar 2002 als Bargeld. Umtauschkurs: 1 € = 1,95583 DM. Seit Bulgarien am 1. Januar 2026 beigetreten ist, zahlen <b>21</b> EU-Länder mit dem Euro.', "Seit 2002 gibt es Euro-Scheine und -Münzen. Heute bezahlen <b>21</b> Länder in Europa damit."],
+   ['Die Aufgabe der EZB','Die EZB soll die Preise stabil halten – Ziel ist eine Inflation von <b>2 %</b> auf mittlere Sicht. Ihr wichtigstes Werkzeug ist der Leitzins. Steigt er, werden Kredite teurer, es wird weniger gekauft, die Inflation sinkt. Am 10. September 2026 hat die EZB den Einlagezins auf 2,50 % erhöht.', "Die EZB passt auf, dass die Preise nur langsam steigen – ungefähr 2 % pro Jahr. Ihr Werkzeug ist der <b>Leitzins</b>: Ist er hoch, wird Geldleihen teurer, die Leute kaufen weniger, und die Preise steigen langsamer."],
+   ['Inflation frisst Kaufkraft','Steigen die Preise, kannst du dir für dasselbe Geld weniger kaufen. Bei 2 % Inflation halbiert sich die Kaufkraft in etwa 35 Jahren. In Deutschland lag die Inflation im August 2026 bei 2,9 %.', ["Alles wird teurer", "<b>Inflation</b> heißt: Die Preise steigen. Ein Eis, das heute 1,50 € kostet, kostet in ein paar Jahren vielleicht 2 €. Für dasselbe Geld bekommst du dann weniger."]],
+   ['Hyperinflation 1923','Im November 1923 kostete ein US-Dollar in Deutschland 4,2 Billionen Mark. Löhne wurden täglich ausgezahlt und sofort ausgegeben. Erst die Rentenmark beendete das Chaos: 1 Rentenmark = 1 Billion Papiermark.', "1923 wurde in Deutschland das Geld fast jeden Tag weniger wert. Am Ende kostete ein Brot Milliarden Mark! Kinder spielten mit Bündeln von Geldscheinen wie mit Bauklötzen."],
+   ['Wenn Preise fallen','Sinken die Preise über längere Zeit, heißt das <b>Deflation</b>. Das ist nicht immer schlimm. Im 19. Jahrhundert fielen die Preise oft, weil Fabriken, Maschinen und Eisenbahnen vieles billiger machten – und die Wirtschaft wuchs trotzdem. Fachleute nennen das „gute“ Deflation: Es gibt mehr Waren, und darum werden sie billiger.', "Wenn Preise über lange Zeit sinken, heißt das <b>Deflation</b>. Das kann gut sein: Vor 150 Jahren wurde vieles billiger, weil Maschinen die Dinge schneller herstellen konnten."],
+   ['Die gefährliche Abwärtsspirale','Schlimm wird es, wenn die Preise fallen, weil die Leute weniger kaufen. Dann verdienen Firmen weniger und entlassen Menschen – die kaufen dann noch weniger. Wer Schulden hat, verdient weniger, muss aber genauso viel zurückzahlen wie vorher. In der Weltwirtschaftskrise sanken die Preise in den USA von 1929 bis 1933 um etwa ein Viertel, die Wirtschaftsleistung um fast ein Drittel. Darum peilen Zentralbanken rund 2 % Inflation an statt 0 % – als Sicherheitsabstand.', "Schlimm wird es, wenn Preise sinken, weil niemand mehr etwas kauft. Dann verdienen Firmen weniger und müssen Leute entlassen. Die haben dann noch weniger Geld zum Einkaufen – ein Teufelskreis. Darum sollen die Preise lieber ein kleines bisschen steigen: etwa 2 % im Jahr."]
+  ],
+  fact:'Mit der Rentenmark von 1923 hatte Deutschland zum ersten Mal Geld, das durch Grundbesitz „gedeckt“ sein sollte – in Wahrheit wirkte es, weil die Menge streng begrenzt war und die Leute wieder Vertrauen fassten.',
+  quiz:[
+   ['Was bedeutet „fiat“?',['Es werde','Gold','Vertrauen','Auto'],0,'Fiatgeld gilt, weil es zum Geld erklärt wurde – nicht, weil es an etwas gebunden ist.'],
+   ['Welche Inflationsrate strebt die EZB mittelfristig an?',['0 %','2 %','5 %','10 %'],1,'2 % gilt als stabil genug und lässt Abstand zur Deflation.'],
+   ['Was bewirkt ein höherer Leitzins in der Regel?',['Kredite werden billiger','Kredite werden teurer, die Inflation sinkt','Es wird mehr Bargeld gedruckt','Gold wird teurer'],1,'Teurere Kredite bremsen Nachfrage und damit den Preisauftrieb.', ["Was bedeutet Inflation?", ["Alles wird billiger", "Alles wird teurer", "Das Geld wird gelöscht", "Die Bank macht zu"], 1, "Steigen die Preise, bekommst du für dein Geld weniger."]],
+   ['Was kostete ein US-Dollar im November 1923 in Deutschland?',['4,20 Mark','4.200 Mark','4,2 Millionen Mark','4,2 Billionen Mark'],3,'Eine Zahl mit 12 Nullen – Hyperinflation.', ["Wie viel kostete 1923 am Ende ein Brot?", ["1 Mark", "100 Mark", "Milliarden Mark", "Gar nichts"], 2, "Das Geld war fast nichts mehr wert – das nennt man Hyperinflation."]]
+  ]},
+{ id:'zins',
+  src:[["Wikipedia: Zinseszins und 72er-Regel", "https://de.wikipedia.org/wiki/Zinseszins"], ["Wikipedia: Weizenkornlegende", "https://de.wikipedia.org/wiki/Weizenkornlegende"], ["Quote Investigator: Das Einstein-Zitat zum Zinseszins (englisch)", "https://quoteinvestigator.com/2011/10/31/compound-interest/"], ["Beispiele mit Anna, Ben und 1.000 €: eigene Rechnung mit 7 % pro Jahr", null]], name:'Zinseszins-Garten', topic:'Wie Geld von allein wächst', extra:'zins',
+  moni:'Jetzt wird es spannend: Wie kann mein Geld eigentlich wachsen, ohne dass ich etwas tue?',
+  cards:[
+   ['Zins ist ein Preis','Der Zins ist der Preis fürs Leihen. Wer Geld verleiht oder spart, bekommt Zinsen. Wer sich Geld leiht, zahlt sie.'],
+   ['Zinsen auf Zinsen','Beim Zinseszins werden die Zinsen nicht ausgezahlt, sondern mitverzinst. Die Formel: <b>Endbetrag = Start × (1 + Zins)<sup>Jahre</sup></b>. Das Wachstum wird dadurch mit jedem Jahr schneller.', "Beim Zinseszins bekommst du Zinsen – und im nächsten Jahr auch Zinsen auf diese Zinsen. Dein Geld wächst wie ein Schneeball, der den Berg hinunterrollt: erst langsam, dann immer schneller."],
+   ['Ein Beispiel','1.000 € zu 7 % pro Jahr: nach 10 Jahren 1.967 €, nach 30 Jahren 7.612 €, nach 40 Jahren 14.974 €. In den letzten zehn Jahren kommt mehr dazu als in den ersten dreißig zusammen.'],
+   ['Die 72er-Regel','Teile 72 durch den Zinssatz – dann weißt du ungefähr, nach wie vielen Jahren sich dein Geld verdoppelt. Bei 6 % sind das 12 Jahre, bei 9 % 8 Jahre.'],
+   ['Früh anfangen schlägt viel einzahlen','Anna spart von 25 bis 35 jedes Jahr 2.000 € und zahlt danach nichts mehr ein, lässt das Geld aber angelegt (20.000 € eingezahlt). Ben spart von 35 bis 65 jedes Jahr 2.000 € (60.000 €). Bei 7 % hat Anna mit 65 rund <b>210.000 €</b>, Ben nur rund <b>189.000 €</b> – mit dreimal so viel eingezahltem Geld.', "Anna legt ab 25 zehn Jahre lang jedes Jahr 2.000 € an. Danach zahlt sie nichts mehr ein – aber ihr Geld bleibt angelegt und wächst mit Zinseszins von allein weiter. Ben fängt erst mit 35 an, also genau dann, als Anna aufhört einzuzahlen. Er zahlt 30 Jahre lang jedes Jahr 2.000 € ein – dreimal so viel wie Anna. Trotzdem hat Anna mit 65 mehr: rund <b>210.000 €</b>, Ben rund <b>189.000 €</b>. Annas Geld hatte zehn Jahre mehr Zeit zum Wachsen – und beim Zinseszins kommt in den letzten Jahren am meisten dazu."],
+   ['Funktioniert auch rückwärts','Bei Schulden arbeitet der Zinseszins gegen dich. Schulden mit 18 % Zinsen verdoppeln sich in nur vier Jahren, wenn man nichts zurückzahlt.'],
+   ['Ein falsches Zitat','Albert Einstein soll gesagt haben, der Zinseszins sei die größte Kraft im Universum. Belegt ist das nirgends – das Zitat wurde ihm erst Jahrzehnte nach seinem Tod zugeschrieben.']
+  ],
+  fact:'Die Legende vom Schachbrett: Ein Weiser wünscht sich ein Reiskorn auf dem ersten Feld und auf jedem weiteren doppelt so viele. Auf dem 64. Feld lägen über 9 Trillionen Körner – mehr Reis, als die Menschheit je geerntet hat.',
+  quiz:[
+   ['Nach wie vielen Jahren verdoppelt sich Geld bei 8 % Zinsen ungefähr?',['4 Jahre','9 Jahre','16 Jahre','72 Jahre'],1,'72 ÷ 8 = 9.'],
+   ['Du legst 1.000 € zu 10 % an. Wie viel hast du nach 2 Jahren mit Zinseszins?',['1.200 €','1.210 €','1.100 €','2.000 €'],1,'1.000 × 1,1 × 1,1 = 1.210 €. Die 10 € extra sind die Zinsen auf die Zinsen.'],
+   ['Wer hat im Beispiel mit 65 mehr Geld?',['Ben, er hat mehr eingezahlt','Anna, weil ihr Geld länger wachsen konnte','Beide gleich viel','Keiner, die Inflation frisst alles'],1,'Zeit ist beim Zinseszins wichtiger als die Höhe der Einzahlung.'],
+   ['Was ist der Zinseszins?',['Ein Zins nur für Banken','Zinsen, die selbst wieder verzinst werden','Eine Strafgebühr','Der Zins der Zentralbank'],1,'Zinsen auf Zinsen.']
+  ]},
+{ id:'kredit',
+  src:[["Wikipedia: Effektiver Jahreszins", "https://de.wikipedia.org/wiki/Effektiver_Jahreszins"], ["Wikipedia: Dispositionskredit", "https://de.wikipedia.org/wiki/Dispositionskredit"], ["Wikipedia: Annuitätendarlehen", "https://de.wikipedia.org/wiki/Annuitätendarlehen"], ["Wikipedia: Schufa", "https://de.wikipedia.org/wiki/Schufa"], ["Wikipedia: Privatinsolvenz", "https://de.wikipedia.org/wiki/Privatinsolvenz"], ["Verbraucherzentrale Hamburg: Schuldnerberatung hilft kostenlos", "https://www.vzhh.de/themen/schulden/schulden-was-tun-schuldnerberatung-hilft-kostenlos-weiter"], ["Wikipedia: Schuldenbremse", "https://de.wikipedia.org/wiki/Schuldenbremse_(Deutschland)"]], name:'Kreditbüro', topic:'Kredite und Schulden', extra:'kredit',
+  moni:'Manchmal reicht das Geld nicht. Darf ich mir dann einfach welches leihen?',
+  cards:[
+   ['Was ein Kredit ist','Ein Kredit ist geliehenes Geld, für das du Zinsen zahlst. Es gibt Ratenkredite, den Dispokredit auf dem Girokonto, Baufinanzierungen, Kreditkarten und „Jetzt kaufen, später zahlen“-Angebote.', "Ein Kredit ist geliehenes Geld. Du bekommst es jetzt und zahlst es später zurück – und zwar mehr, als du bekommen hast. Das Extra sind die Zinsen."],
+   ['Nur den Effektivzins vergleichen','Der <b>effektive Jahreszins</b> enthält alle Kosten des Kredits. Der Sollzins ist oft niedriger und sieht nur schöner aus. Banken müssen den Effektivzins angeben.', "Banken werben gern mit kleinen Zahlen. Wichtig ist der <b>effektive Jahreszins</b>: In ihm stecken alle Kosten. Nur so kann man Angebote fair vergleichen."],
+   ['Der teure Dispo','Überziehst du dein Girokonto, zahlst du Dispozinsen – oft um die 10 bis 14 % im Jahr. Für ein paar Tage okay, als Dauerzustand eine der teuersten Arten, Geld zu leihen.', "Gibst du mehr aus, als auf dem Konto ist, rutschst du ins Minus. Das nennt man <b>Dispo</b> – und der ist richtig teuer."],
+   ['Die Annuität','Bei den meisten Krediten zahlst du jeden Monat dieselbe Rate. Am Anfang besteht sie vor allem aus Zinsen, am Ende fast nur aus Tilgung. Je länger die Laufzeit, desto kleiner die Rate – aber desto mehr Zinsen insgesamt.', null],
+   ['Gute und schlechte Schulden','Ein Kredit kann sinnvoll sein, wenn er etwas finanziert, das Wert schafft oder Einkommen bringt: eine Ausbildung, Werkzeug für die Selbstständigkeit, eine vermietete Wohnung. Für Dinge, die schnell an Wert verlieren – Urlaub, Handy, Möbel auf Raten –, macht ein Kredit sie nur teurer.', "Für manche Dinge kann sich ein Kredit lohnen, zum Beispiel für eine Ausbildung, die später mehr Geld bringt. Für Dinge, die schnell kaputt oder verbraucht sind – Handy, Urlaub, Turnschuhe –, macht ein Kredit sie nur teurer."],
+   ['Schufa','Die Schufa speichert, welche Kredite und Verträge du hast und ob du pünktlich zahlst. Daraus berechnet sie einen Score. Er entscheidet mit, ob du einen Kredit oder Handyvertrag bekommst und zu welchem Zins.', "Die Schufa merkt sich, ob Leute ihre Rechnungen pünktlich bezahlen. Wer oft zu spät zahlt, bekommt später schwerer einen Kredit oder Handyvertrag."],
+   ['Raus aus der Schuldenfalle','Wer neue Kredite aufnimmt, um alte zu bezahlen, rutscht in die Schuldenfalle. Kostenlose Hilfe gibt es bei Schuldnerberatungen von Verbraucherzentralen, Caritas oder Diakonie. Als letzter Weg bleibt die Privatinsolvenz; die Restschuldbefreiung gibt es heute meist nach drei Jahren.', "Wer neue Schulden macht, um alte zu bezahlen, sitzt in der Schuldenfalle. Dann hilft eine Schuldnerberatung – kostenlos."],
+   ['Staaten sind keine Haushalte','Ein Staat zahlt seine Schulden selten ganz zurück. Er ersetzt fällige Anleihen durch neue. Entscheidend ist, ob er die Zinsen tragen kann. In Deutschland begrenzt die Schuldenbremse im Grundgesetz seit 2009 die Neuverschuldung; 2025 wurde sie für Verteidigung gelockert.', null]
+  ],
+  fact:'Das Wort „Kredit“ kommt vom lateinischen <i>credere</i> – glauben, vertrauen. Wer Kredit gibt, glaubt daran, das Geld zurückzubekommen.',
+  quiz:[
+   ['Welchen Zins solltest du beim Vergleich von Krediten anschauen?',['Den Sollzins','Den effektiven Jahreszins','Den Leitzins','Den Sparzins'],1,'Nur der Effektivzins enthält alle Kosten.'],
+   ['Woraus besteht die Rate eines Annuitätenkredits am Anfang vor allem?',['Aus Tilgung','Aus Zinsen','Aus Gebühren','Aus Steuern'],1,'Die Restschuld ist anfangs am höchsten, also auch die Zinsen.', ["Was ist ein Dispo?", ["Ein Sparbuch", "Ein Minus auf dem Girokonto", "Ein Geschenk der Bank", "Eine Münze"], 1, "Der Dispo ist teuer – am besten schnell wieder ausgleichen."]],
+   ['Was passiert bei längerer Laufzeit desselben Kredits?',['Kleinere Rate, aber mehr Zinsen insgesamt','Größere Rate, weniger Zinsen','Alles bleibt gleich','Der Kredit wird zinsfrei'],0,'Länger leihen kostet länger Zinsen.', ["Wofür lohnt sich ein Kredit eher?", ["Für einen Urlaub", "Für neue Turnschuhe", "Für eine Ausbildung", "Für Süßigkeiten"], 2, "Eine Ausbildung bringt später mehr Einkommen – Turnschuhe nicht."]],
+   ['Woher kommt das Wort „Kredit“?',['Von <i>credere</i> – glauben, vertrauen','Von „Kreide“, weil man anschrieb','Von „Credit Card“','Aus dem Griechischen für „Schuld“'],0,'Wer leiht, vertraut. Das Anschreiben mit Kreide ist eine schöne Geschichte, aber nicht die Herkunft.']
+  ]},
+{ id:'konsum',
+  src:[["Wikipedia: Opportunitätskosten", "https://de.wikipedia.org/wiki/Opportunitätskosten"], ["Wikipedia: Sparquote", "https://de.wikipedia.org/wiki/Sparquote"], ["ING Wissen: Notgroschen", "https://www.ing.de/wissen/notgroschen"], ["Kaffee- und Süßigkeiten-Beispiel: eigene Rechnung", null]], name:'Einkaufsstraße', topic:'Konsum oder Investition?', extra:'sortieren',
+  moni:'Neue Turnschuhe oder Aktien? Wie entscheide ich, wofür mein Geld da ist?',
+  cards:[
+   ['Konsum','Konsum ist Geld für etwas, das du verbrauchst: Essen, Kino, Kleidung, Urlaub. Konsum ist nötig und darf Freude machen. Es geht nicht darum, nichts auszugeben, sondern bewusst.'],
+   ['Investition','Eine Investition ist Geld für etwas, das dir später Geld oder Nutzen bringt: Aktien, eine Weiterbildung, Werkzeug für einen Nebenjob, eine vermietete Wohnung.'],
+   ['Was Geld bringt und was Geld kostet','Ein Vermögenswert bringt Geld herein. Eine Verbindlichkeit zieht jeden Monat Geld ab. Ein Auto kostet Versicherung, Steuer, Sprit, Reparaturen und verliert an Wert – auch wenn man es „besitzt“.', "Manche Dinge bringen dir Geld, andere kosten dich jeden Monat Geld. Ein Auto zum Beispiel kostet Versicherung, Sprit und Reparaturen – und wird jedes Jahr weniger wert."],
+   ['Opportunitätskosten','Jeder Euro kann nur einmal ausgegeben werden. Ein Kaffee für 5 € an jedem Arbeitstag sind etwa 1.100 € im Jahr. Monatlich in einen Sparplan mit 7 % gesteckt, wären das nach 30 Jahren rund 110.000 €. Der Kaffee ist trotzdem erlaubt – nur sollte man wissen, was er kostet.', ["Was kosten Süßigkeiten wirklich?", "Jeden Euro kannst du nur einmal ausgeben. Wer an jedem Schultag 2 € für Süßigkeiten ausgibt, kommt im Jahr auf rund 380 €. Das ist erlaubt – man sollte nur wissen, wie viel da zusammenkommt."]],
+   ['Erst sich selbst bezahlen','Richte einen Dauerauftrag ein, der am Monatsanfang den Sparbetrag wegüberweist. Dann lebst du vom Rest – statt am Monatsende zu sparen, was übrig ist. Meist ist dann nämlich nichts übrig.', ["Erst sparen, dann ausgeben", "Leg gleich etwas zur Seite, wenn du Taschengeld bekommst – nicht erst das, was am Ende übrig ist. Denn meistens ist dann nichts mehr übrig."]],
+   ['Erst der Notgroschen','Bevor du investierst: etwa zwei bis drei Netto-Monatsgehälter auf ein Tagesgeldkonto, als Familie eher sechs. Dann musst du nie Aktien im Crash verkaufen, nur weil die Waschmaschine kaputtgeht.', "Bevor man Geld anlegt, legt man etwas für Notfälle zur Seite. Dann muss man nichts verkaufen, wenn plötzlich das Fahrrad kaputtgeht."],
+   ['Die Gehaltsfalle','Steigt das Einkommen, steigen oft die Ausgaben gleich mit: größere Wohnung, neueres Auto. Wer bei jeder Gehaltserhöhung die Hälfte zusätzlich spart, merkt den Verzicht kaum.', null]
+  ],
+  fact:'In Deutschland sparen Haushalte im Schnitt gut 10 % ihres verfügbaren Einkommens – deutlich mehr als in den USA. Ein großer Teil davon liegt aber auf Konten mit wenig Zinsen.',
+  quiz:[
+   ['Was solltest du anlegen, bevor du investierst?',['Einen Notgroschen von einigen Monatsgehältern','Ein Bitcoin-Depot','Eine Goldreserve','Einen Kredit'],0,'Der Notgroschen schützt dich davor, im falschen Moment verkaufen zu müssen.', ["Wofür ist ein Notgroschen da?", ["Für Süßigkeiten", "Für unerwartete Ausgaben, zum Beispiel ein kaputtes Fahrrad", "Für die Börse", "Als Geschenk für die Bank"], 1, "Mit Notgroschen musst du im Notfall nichts verkaufen und keine Schulden machen."]],
+   ['Was bedeutet „Opportunitätskosten“?',['Kosten für einen Termin','Was man aufgibt, wenn man das Geld für etwas anderes verwendet','Kosten einer Firma','Eine Bankgebühr'],1,'Jede Ausgabe ist auch die Entscheidung gegen alle anderen Möglichkeiten.', ["2 € an jedem Schultag – wie viel ist das ungefähr im Jahr?", ["20 €", "100 €", "380 €", "5.000 €"], 2, "Rund 190 Schultage mal 2 € sind etwa 380 €."]],
+   ['Was heißt „Erst sich selbst bezahlen“?',['Sich selbst ein Gehalt überweisen','Am Monatsanfang zuerst sparen, dann vom Rest leben','Alles für sich ausgeben','Keine Rechnungen bezahlen'],1,'Sparen wird zur festen Ausgabe statt zum Rest.', ["Wann sparst du am besten?", ["Gleich, wenn das Taschengeld kommt", "Am Monatsende, was übrig ist", "Nie", "Nur an Geburtstagen"], 0, "Wer zuerst spart, hat am Ende wirklich etwas gespart."]],
+   ['Was ist eine Weiterbildung, die dein Einkommen erhöht?',['Konsum','Eine Investition','Eine Verbindlichkeit','Eine Schuld'],1,'Sie kostet heute und bringt später mehr Geld.']
+  ]},
+{ id:'boerse',
+  src:[["Wikipedia: Niederländische Ostindien-Kompanie", "https://de.wikipedia.org/wiki/Niederländische_Ostindien-Kompanie"], ["Wikipedia: Börse", "https://de.wikipedia.org/wiki/Börse"], ["Wikipedia: Wirecard", "https://de.wikipedia.org/wiki/Wirecard"], ["Wikipedia: MSCI World", "https://de.wikipedia.org/wiki/MSCI_World"], ["Wikipedia: Exchange-traded Fund (ETF)", "https://de.wikipedia.org/wiki/Exchange-traded_fund"], ["Wikipedia: Dividende", "https://de.wikipedia.org/wiki/Dividende"], ["Wikipedia: Sondervermögen", "https://de.wikipedia.org/wiki/Sondervermögen"], ["Wikipedia: Sparer-Pauschbetrag", "https://de.wikipedia.org/wiki/Sparer-Pauschbetrag"]], name:'Börse', topic:'Aktien und ETFs',
+  easy:{ fact:'Manche Firmen teilen ihren Gewinn mit den Aktionären. Das heißt <b>Dividende</b>. Wer eine Aktie hat, bekommt also manchmal Geld, ohne etwas zu verkaufen.' },
+  moni:'Alle reden von Aktien und ETFs. Was kaufe ich da eigentlich?',
+  cards:[
+   ['Eine Aktie ist ein Stück Firma','Mit einer Aktie besitzt du einen kleinen Anteil an einem Unternehmen. Du verdienst, wenn der Kurs steigt, und oft über die <b>Dividende</b> – einen Teil des Gewinns, den die Firma ausschüttet.'],
+   ['Warum Kurse steigen und fallen','Auch an der Börse gilt Angebot und Nachfrage. Wollen mehr Leute eine Aktie kaufen als verkaufen, steigt der Kurs – so lange, bis sich genug Verkäufer finden. Gute Nachrichten über eine Firma locken Käufer an, schlechte vertreiben sie. Bei Panik wollen alle gleichzeitig verkaufen – dann stürzt der Kurs, auch wenn sich an der Firma selbst wenig geändert hat.', "An der Börse ist es wie auf dem Wochenmarkt: Wollen viele eine Aktie kaufen, steigt ihr Preis. Wollen viele sie loswerden, fällt er. Gute Nachrichten über eine Firma machen ihre Aktie beliebt, schlechte Nachrichten unbeliebt."],
+   ['Die erste Aktiengesellschaft','1602 gründeten Kaufleute in Amsterdam die Niederländische Ostindien-Kompanie (VOC). Ihre Anteile konnte jeder kaufen und verkaufen – daraus entstand die erste Börse im heutigen Sinn.', "Vor über 400 Jahren konnte man in Amsterdam zum ersten Mal Anteile an einer Firma kaufen und weiterverkaufen. So entstand die erste Börse."],
+   ['Das Risiko der Einzelaktie','Einzelne Firmen können pleitegehen. Wirecard war 2018 im DAX und meldete 2020 Insolvenz an – die Aktie war praktisch nichts mehr wert. Wer nur auf eine Firma setzt, kann alles verlieren.', "Eine einzelne Firma kann pleitegehen. Dann ist ihre Aktie nichts mehr wert. Das ist zum Beispiel 2020 der Firma Wirecard passiert."],
+   ['Streuen statt wetten','Kaufst du viele Firmen aus vielen Ländern und Branchen, fällt eine Pleite kaum ins Gewicht. Das heißt <b>Diversifikation</b>. Die Schwankungen des ganzen Marktes bleiben trotzdem.', "Leg nicht alle Eier in einen Korb: Fällt er runter, sind alle kaputt. Kaufst du Anteile an vielen Firmen, ist eine Pleite nicht so schlimm. Das nennt man <b>streuen</b>."],
+   ['Was ein ETF ist','ETF steht für <i>Exchange Traded Fund</i>, einen börsengehandelten Indexfonds. Er bildet einen Index nach, etwa den MSCI World mit rund 1.300 Firmen aus 23 Industrieländern. Die Kosten (TER) liegen oft bei 0,1 bis 0,3 % im Jahr. Aktiv gemanagte Fonds kosten oft 1,5 % und mehr – und schlagen den Markt über lange Zeit meist nicht.', "Ein <b>ETF</b> ist wie eine große Tüte mit Anteilen an vielen Firmen. Ein ETF auf den Weltindex enthält rund 1.300 Firmen aus vielen Ländern – und kostet nur wenig Gebühren."],
+   ['Rauf und runter','Breit gestreute Aktien brachten historisch langfristig etwa 6 bis 8 % pro Jahr. Dazwischen gab es tiefe Einbrüche: 2008 rund −40 %, im Corona-Crash 2020 über −30 % in wenigen Wochen. Wer 15 Jahre und länger dabeiblieb, lag beim Weltindex historisch fast immer im Plus.', "Aktien gehen rauf und runter. Manchmal fallen sie in kurzer Zeit um ein Drittel. Wer aber viele Jahre durchgehalten hat, lag mit einem weltweiten ETF bisher fast immer im Plus."],
+   ['Sparplan und Steuern','Mit einem Sparplan kaufst du jeden Monat automatisch Anteile, mal teurer, mal billiger. Auf Gewinne fallen in Deutschland 25 % Abgeltungsteuer plus Soli an – die ersten <b>1.000 € pro Jahr</b> (Paare 2.000 €) bleiben über den Sparerpauschbetrag steuerfrei.', ["Der Sparplan", "Mit einem Sparplan steckst du jeden Monat automatisch einen kleinen Betrag in einen ETF – schon ab ein paar Euro. Was dabei mit Steuern ist, erfährst du an der nächsten Station, im Finanzamt."]],
+   ['Sicher verwahrt','ETF-Anteile sind <b>Sondervermögen</b>. Geht der ETF-Anbieter oder deine Bank pleite, gehören die Anteile weiterhin dir.', null]
+  ],
+  fact:'Ausschüttende ETFs zahlen Dividenden aufs Konto, thesaurierende legen sie automatisch wieder an – das ist eingebauter Zinseszins.',
+  quiz:[
+   ['Was kaufst du mit einer Aktie?',['Einen Kredit an die Firma','Einen Anteil an der Firma','Ein Produkt der Firma','Einen Gutschein'],1,'Aktionäre sind Miteigentümer.'],
+   ['Wofür steht ETF?',['Euro Trading Fund','Exchange Traded Fund','Extra Tax Free','Easy To Find'],1,'Ein Fonds, der an der Börse gehandelt wird.'],
+   ['Wozu dient Diversifikation?',['Um das Risiko einzelner Firmen zu verringern','Um Steuern zu vermeiden','Um schneller reich zu werden','Um Gebühren zu sparen'],0,'Viele kleine Teile statt einer großen Wette.'],
+   ['Wie viel Kapitalertrag bleibt für eine Person pro Jahr steuerfrei?',['100 €','801 €','1.000 €','10.000 €'],2,'Seit 2023 sind es 1.000 € (vorher 801 €).', ["Was ist ein Sparplan?", ["Ein Plan für den Urlaub", "Jeden Monat automatisch einen Betrag anlegen", "Ein Kredit", "Ein Sparschwein aus Plastik"], 1, "Kleine Beträge, regelmäßig – und der Zinseszins macht den Rest."]]
+  ]},
+{ id:'steuern',
+  src:[["Wikipedia: Abgeltungsteuer", "https://de.wikipedia.org/wiki/Abgeltungsteuer_(Deutschland)"], ["Wikipedia: Sparer-Pauschbetrag", "https://de.wikipedia.org/wiki/Sparer-Pauschbetrag"], ["§ 20 EStG – Kapitalvermögen, Verlustverrechnung", "https://www.gesetze-im-internet.de/estg/__20.html"], ["§ 32d EStG – Steuersatz, Günstigerprüfung", "https://www.gesetze-im-internet.de/estg/__32d.html"], ["§ 23 EStG – Private Veräußerungsgeschäfte (Gold, Bitcoin)", "https://www.gesetze-im-internet.de/estg/__23.html"], ["§ 20 InvStG – Teilfreistellung", "https://www.gesetze-im-internet.de/invstg_2018/__20.html"], ["§ 18 InvStG – Vorabpauschale", "https://www.gesetze-im-internet.de/invstg_2018/__18.html"], ["Wikipedia: Mehrwertsteuer", "https://de.wikipedia.org/wiki/Mehrwertsteuer"], ["Wikipedia: Steuer (Wortherkunft)", "https://de.wikipedia.org/wiki/Steuer"]], name:'Finanzamt', topic:'Steuern auf Kapitalerträge',
+  moni:'Gewinne sind schön – aber das Finanzamt verdient mit. Wie viel genau? Und wie zahle ich nicht mehr als nötig?',
+  cards:[
+   ['Die Abgeltungsteuer','Auf Kapitalerträge – Zinsen, Dividenden, Kursgewinne aus Aktien und Fonds – fallen pauschal <b>25 % Abgeltungsteuer</b> an, dazu 5,5 % Solidaritätszuschlag auf die Steuer. Zusammen sind das <b>26,375 %</b>. Wer Kirchensteuer zahlt, kommt auf knapp 28 %. Die Bank führt die Steuer direkt ans Finanzamt ab.'],
+   ['Freibetrag und Freistellungsauftrag','Die ersten <b>1.000 €</b> Kapitalerträge im Jahr sind steuerfrei (Sparerpauschbetrag), bei gemeinsam veranlagten Paaren 2.000 €. Damit die Bank ihn berücksichtigt, braucht sie einen <b>Freistellungsauftrag</b>; bei mehreren Banken teilst du den Betrag auf. Wer insgesamt wenig Einkommen hat, etwa Studierende, kann eine <b>NV-Bescheinigung</b> beantragen und zahlt dann gar keine Abgeltungsteuer.'],
+   ['Die Günstigerprüfung','Liegt dein persönlicher Einkommensteuersatz unter 25 %, kannst du in der Steuererklärung (Anlage KAP) die <b>Günstigerprüfung</b> beantragen. Dann werden die Kapitalerträge mit deinem niedrigeren Satz besteuert, und zu viel gezahlte Steuer kommt zurück.'],
+   ['Teilfreistellung bei Fonds','Bei Aktienfonds und Aktien-ETFs (mindestens 51 % Aktien) sind <b>30 % der Erträge steuerfrei</b>, bei Mischfonds 15 %. Beispiel: 3.000 € Gewinn mit einem Welt-ETF → 2.100 € steuerpflichtig → minus 1.000 € Freibetrag → 1.100 € × 26,375 % = <b>rund 290 € Steuern</b>.'],
+   ['Die Vorabpauschale','Thesaurierende ETFs schütten nichts aus. Damit trotzdem jedes Jahr etwas versteuert wird, gibt es die <b>Vorabpauschale</b>: Fondswert am Jahresanfang × 70 % des Basiszinses, den das Finanzministerium jedes Jahr festlegt – höchstens aber der tatsächliche Wertzuwachs. Die Bank zieht sie Anfang des Folgejahres ab, zuerst über den Freibetrag. Beim Verkauf wird sie angerechnet; doppelt zahlst du also nicht.'],
+   ['Verluste verrechnen','Verluste sind steuerlich nicht verloren: Die Bank führt einen <b>Verlusttopf</b> und verrechnet ihn mit späteren Gewinnen. Verluste aus <b>Einzelaktien</b> landen in einem eigenen Aktientopf und dürfen nur mit Aktiengewinnen verrechnet werden. Verluste bei verschiedenen Banken führst du über eine <b>Verlustbescheinigung</b> (Antrag bis 15. Dezember) in der Steuererklärung zusammen.'],
+   ['Gold, Bitcoin & Co.','Physisches Gold und Kryptowährungen fallen nicht unter die Abgeltungsteuer, sondern unter die <b>privaten Veräußerungsgeschäfte</b> (§ 23 EStG). Verkaufst du nach <b>mehr als einem Jahr</b>, ist der Gewinn steuerfrei. Davor gilt dein persönlicher Steuersatz, mit einer <b>Freigrenze von 1.000 €</b> im Jahr. Freigrenze heißt: Liegt der Gewinn darüber, ist der ganze Gewinn steuerpflichtig, nicht nur der Teil darüber.'],
+   ['Und im Simulator?','Zinsen werden im echten Leben jedes Jahr versteuert, sobald sie gutgeschrieben werden. Der Simulator vereinfacht: Moni zahlt 26,375 % erst beim Verkauf, ohne Teilfreistellung, Vorabpauschale, Kirchensteuer und getrennten Aktientopf. Gold und Bitcoin sind dort immer steuerfrei.']
+  ],
+  fact:'Ein ungenutzter Freibetrag verfällt am Jahresende. Profi-Trick: Bleibt im Dezember etwas übrig, verkaufst du Gewinne bis zu dieser Höhe und kaufst sofort wieder. Dein Einstandskurs steigt, und später fällt weniger Steuer an. Ordergebühren sollten dabei kleiner sein als die Ersparnis.',
+  quiz:[
+   ['Wie hoch ist die Abgeltungsteuer inklusive Soli, ohne Kirchensteuer?',['19 %','25 %','26,375 %','42 %'],2,'25 % plus 5,5 % Soli auf die Steuer ergibt 26,375 %.'],
+   ['Welcher Anteil eines Gewinns aus einem Aktien-ETF ist durch die Teilfreistellung steuerfrei?',['0 %','15 %','30 %','100 %'],2,'Bei Aktienfonds sind es 30 %, bei Mischfonds 15 %.'],
+   ['Du verkaufst Bitcoin nach 14 Monaten mit Gewinn. Was gilt?',['Abgeltungsteuer','Steuerfrei, weil länger als ein Jahr gehalten','Dein persönlicher Steuersatz','Mehrwertsteuer'],1,'Private Veräußerungsgeschäfte sind nach mehr als einem Jahr steuerfrei.'],
+   ['Womit dürfen Verluste aus Einzelaktien verrechnet werden?',['Mit allen Kapitalerträgen','Nur mit Gewinnen aus Aktien','Mit dem Gehalt','Gar nicht'],1,'Dafür führt die Bank einen eigenen Aktienverlusttopf.']
+  ],
+  easy:{ topic:'Was sind Steuern?',
+   moni:'Ich habe gehört, von Gewinnen muss man etwas abgeben. An wen denn – und warum eigentlich?',
+   cards:[
+    ['Was sind Steuern?','Steuern ist Geld, das Menschen und Firmen an den Staat zahlen. Davon werden Schulen, Straßen, Spielplätze, Polizei und Feuerwehr bezahlt. Steuern sind also unser gemeinsames Geld für Dinge, die allen gehören.'],
+    ['Steuern im Eis','Kaufst du ein Eis, steckt im Preis schon eine Steuer: die <b>Mehrwertsteuer</b>. Bei Lebensmitteln sind es meist 7 %, bei fast allem anderen 19 %. Auf dem Kassenzettel steht, wie viel es war. Auch Kinder zahlen also schon Steuern!'],
+    ['Steuern aufs Gehalt','Wer arbeitet, zahlt <b>Einkommensteuer</b>. Wer wenig verdient, zahlt gar keine. Wer mehr verdient, gibt einen größeren Anteil ab. Starke Schultern tragen mehr.'],
+    ['Steuern auf Gewinne','Bringt dein Geld Zinsen, oder verkaufst du eine Aktie teurer, als du sie gekauft hast, ist das auch Einkommen. Davon geht ungefähr <b>ein Viertel</b> als Steuer weg.'],
+    ['Der Freibetrag','Aber: Die ersten <b>1.000 € Gewinn im Jahr</b> sind steuerfrei – auch für Kinder. Damit die Bank das weiß, bekommt sie einen <b>Freistellungsauftrag</b>, meistens von den Eltern. Auf dein Sparbuch zahlst du also sehr wahrscheinlich keine Steuern.'],
+    ['Wer kümmert sich darum?','Das <b>Finanzamt</b> sammelt die Steuern ein. Bei Zinsen und Aktien zieht die Bank sie automatisch ab. Viele Erwachsene geben außerdem einmal im Jahr eine <b>Steuererklärung</b> ab – oft bekommen sie dann sogar Geld zurück.']
+   ],
+   fact:'Das Wort „Steuer“ kommt vom althochdeutschen <i>stiura</i>. Das heißt Stütze oder Hilfe – Steuern sollen den Staat stützen.',
+   quiz:[
+    ['Wofür bezahlt der Staat mit Steuern?',['Nur für Politiker-Autos','Für Schulen, Straßen und Spielplätze','Für dein Taschengeld','Für gar nichts'],1,'Steuern bezahlen Dinge, die wir alle gemeinsam nutzen.'],
+    ['Welche Steuer zahlst du schon beim Eiskaufen?',['Hundesteuer','Mehrwertsteuer','Einkommensteuer','Gar keine'],1,'Sie steckt schon im Preis.'],
+    ['Wie viel Gewinn aus Zinsen und Aktien ist pro Jahr steuerfrei?',['10 €','100 €','1.000 €','Alles'],2,'Der Freibetrag liegt bei 1.000 € pro Person – auch für Kinder.'],
+    ['Wer sammelt die Steuern ein?',['Die Schule','Das Finanzamt','Der Bäcker','Die Börse'],1,'Bei Zinsen und Aktien hilft die Bank und zieht die Steuer gleich ab.']
+   ]}},
+{ id:'leasing',
+  src:[["Wikipedia: Leasing", "https://de.wikipedia.org/wiki/Leasing"], ["Wikipedia: Restwert", "https://de.wikipedia.org/wiki/Restwert"], ["finanz.de: Leasing und Leasingfaktor", "https://www.finanz.de/finanzierung/leasing/"], ["Wikipedia: JobRad (Dienstrad-Leasing)", "https://de.wikipedia.org/wiki/Jobrad"]], name:'Autohaus', topic:'Was Leasing bedeutet',
+  moni:'Im Autohaus steht: „Nur 199 € im Monat!“ Ist das ein Schnäppchen?',
+  cards:[
+   ['Leasing ist langes Mieten','Du zahlst jeden Monat dafür, ein Auto (oder ein Fahrrad, Handy, eine Maschine) zu nutzen. Es gehört aber der Leasinggesellschaft. Am Ende gibst du es zurück und hast nichts, was du verkaufen könntest.', "Leasing ist wie Mieten für lange Zeit: Man zahlt jeden Monat und darf das Auto fahren. Es gehört einem aber nie. Am Ende gibt man es zurück."],
+   ['Kilometerleasing','Du vereinbarst, wie viel du fährst, z. B. 10.000 km im Jahr. Fährst du mehr, zahlst du jeden Mehrkilometer nach. Fährst du weniger, gibt es meist nur wenig zurück.', "Meist vereinbart man, wie viele Kilometer man fahren darf. Fährt man mehr, muss man extra zahlen."],
+   ['Restwertleasing','Hier wird festgelegt, was das Auto am Ende noch wert sein soll. Ist es weniger wert, zahlst <b>du</b> die Differenz. Das Risiko liegt also beim Kunden.', null],
+   ['Das Kleingedruckte','Zur Rate kommen oft eine Leasingsonderzahlung (wie eine Anzahlung), Überführungskosten, eine Pflicht-Vollkasko und bei der Rückgabe Kosten für Kratzer und Dellen. Die 199 € sind selten alles.', "„Nur 199 € im Monat!“ – oft kommen noch Kosten dazu: eine Anzahlung, eine teure Versicherung und Geld für Kratzer bei der Rückgabe."],
+   ['Der Leasingfaktor','Monatsrate ÷ Listenpreis × 100. Ein Auto für 40.000 € mit 250 € Rate hat den Faktor 0,63. Unter 1 gilt als günstiges Angebot – vorausgesetzt, es gibt keine hohe Sonderzahlung.', null],
+   ['Für wen lohnt es sich?','Für Firmen und Selbstständige, weil sie die Raten als Betriebsausgabe absetzen können, und für Leute, die immer ein neues Auto wollen. Für Privatleute ist ein gut gekaufter Gebrauchter meist günstiger. Ein Neuwagen verliert in den ersten drei Jahren oft 30 bis 40 % seines Werts – beim Leasing bezahlst du genau diesen Wertverlust.', "Ein neues Auto verliert in den ersten drei Jahren oft ein Drittel seines Werts. Beim Leasing bezahlt man genau diesen Wertverlust. Ein guter Gebrauchtwagen ist für die meisten Familien billiger."]
+  ],
+  fact:'Das Dienstrad-Leasing über den Arbeitgeber wird in Deutschland steuerlich gefördert. Deshalb fahren so viele Leute ein teures E-Bike „vom Chef“.',
+  quiz:[
+   ['Wem gehört ein geleastes Auto?',['Dir','Der Leasinggesellschaft','Dem Staat','Dem Autohaus für immer'],1,'Du nutzt es nur und gibst es am Ende zurück.'],
+   ['Beim Restwertleasing ist das Auto am Ende weniger wert als vereinbart. Wer zahlt die Differenz?',['Die Leasinggesellschaft','Du','Die Versicherung','Niemand'],1,'Das Restwertrisiko trägt der Kunde.', ["Was passiert am Ende des Leasings?", ["Das Auto gehört dir", "Du gibst das Auto zurück", "Das Auto wird verschrottet", "Du bekommst ein Fahrrad dazu"], 1, "Beim Leasing mietest du nur – am Ende geht das Auto zurück."]],
+   ['Rate 250 €, Listenpreis 40.000 €. Wie hoch ist der Leasingfaktor?',['0,63','1,6','6,3','16'],0,'250 ÷ 40.000 × 100 = 0,625.', ["Was kann zur Leasingrate noch dazukommen?", ["Nichts", "Anzahlung, Versicherung und Kosten für Kratzer", "Ein Gratis-Auto", "Taschengeld"], 1, "Die Werbe-Rate ist selten alles, was man zahlt."]],
+   ['Was kostet beim Kilometerleasing extra?',['Weniger fahren','Mehr fahren als vereinbart','Tanken','Radio hören'],1,'Mehrkilometer werden nachberechnet.']
+  ]},
+{ id:'krypto',
+  src:[["Satoshi Nakamoto: Bitcoin-Whitepaper, 2008 (englisch, PDF)", "https://bitcoin.org/bitcoin.pdf"], ["Wikipedia: Bitcoin", "https://de.wikipedia.org/wiki/Bitcoin"], ["Wikipedia: Bitcoin Pizza Day (englisch)", "https://en.wikipedia.org/wiki/Bitcoin_Pizza_Day"], ["Wikipedia: Mt. Gox", "https://de.wikipedia.org/wiki/Mt.Gox"], ["Wikipedia: FTX", "https://de.wikipedia.org/wiki/FTX"], ["§ 23 EStG – Private Veräußerungsgeschäfte", "https://www.gesetze-im-internet.de/estg/__23.html"]], name:'Krypto-Labor', topic:'Fakten über Bitcoin',
+  moni:'Mein Nachbar sagt, Bitcoin ist das Gold der Zukunft. Meine Oma sagt, das ist Spielgeld. Wer hat recht?',
+  cards:[
+   ['Geboren aus der Finanzkrise','Am 31. Oktober 2008 veröffentlichte jemand unter dem Namen „Satoshi Nakamoto“ das Bitcoin-Konzept. Wer das ist, weiß bis heute niemand. Im ersten Block vom 3. Januar 2009 steht eine Zeitungsschlagzeile über die Rettung britischer Banken.', ["Wer hat Bitcoin erfunden?", "2008 hat jemand mit dem Namen „Satoshi Nakamoto“ Bitcoin erfunden. Wer das wirklich ist, weiß bis heute niemand!"]],
+   ['Ein Kassenbuch für alle','Die <b>Blockchain</b> ist ein öffentliches Kassenbuch, das Tausende Computer gemeinsam führen. Jede Zahlung steht darin. Es gibt keine Bank und keine Zentralbank, die bestimmt oder rückgängig machen kann.', "Die <b>Blockchain</b> ist wie ein riesiges Heft, in dem jede Bitcoin-Zahlung steht. Tausende Computer haben eine Kopie davon. Deshalb kann niemand heimlich etwas ändern."],
+   ['Mining','Rechner lösen um die Wette ein Rechenrätsel (Proof of Work). Wer gewinnt, hängt den nächsten Block an und bekommt neue Bitcoin. Etwa alle 10 Minuten entsteht ein Block. Dafür wird sehr viel Strom verbraucht.', "Computer lösen um die Wette schwierige Rechenrätsel. Wer gewinnt, bekommt neue Bitcoin. Das verbraucht sehr viel Strom."],
+   ['Fest begrenzt','Es wird höchstens <b>21 Millionen</b> Bitcoin geben. Etwa alle vier Jahre halbiert sich die Belohnung für die Miner („Halving“). Seit April 2024 sind es 3,125 BTC pro Block; das nächste Halving wird um 2028 erwartet, der letzte Bitcoin um das Jahr 2140.', "Es wird nie mehr als <b>21 Millionen</b> Bitcoin geben. Das ist fest so programmiert."],
+   ['Die teuerste Pizza','Am 22. Mai 2010 bezahlte Laszlo Hanyecz zwei Pizzen mit 10.000 Bitcoin – der erste bekannte Kauf. Bitcoin-Fans feiern den Tag jedes Jahr als „Pizza Day“.'],
+   ['Wilde Schwankungen','Bitcoin hat keine Zinsen, keine Dividende und keine Firma dahinter. Sein Preis hängt nur an Angebot und Nachfrage. Er ist mehrfach um 70 bis 80 % eingebrochen (2018, 2022) und danach auf neue Rekorde gestiegen.', "Hinter Bitcoin steht keine Firma, und es gibt keine Zinsen. Der Preis springt wild rauf und runter – er ist schon mehrmals um drei Viertel gefallen."],
+   ['Nicht deine Schlüssel …','„Not your keys, not your coins.“ Wer seinen privaten Schlüssel verliert, verliert seine Bitcoin für immer. Wer sie bei einer Börse liegen lässt, kann sie bei deren Pleite verlieren – wie bei Mt. Gox 2014 und FTX 2022.', "Bitcoin schützt man mit einem geheimen Schlüssel – einer Art Passwort. Wer ihn verliert, kommt nie wieder an seine Bitcoin. Niemand kann helfen."],
+   ['Steuern','In Deutschland sind Gewinne aus Bitcoin nach aktueller Rechtslage steuerfrei, wenn man sie länger als ein Jahr gehalten hat. Davor zählen sie zum Einkommen.', null]
+  ],
+  fact:'Die kleinste Einheit heißt Satoshi: 1 Bitcoin = 100.000.000 Satoshi. Man muss also nie einen ganzen Bitcoin kaufen.',
+  quiz:[
+   ['Wie viele Bitcoin kann es höchstens geben?',['21 Millionen','100 Millionen','1 Milliarde','Unbegrenzt'],0,'Die Grenze steht im Programmcode.'],
+   ['Was passiert beim Halving?',['Der Preis halbiert sich','Die Belohnung für die Miner halbiert sich','Jeder Bitcoin wird geteilt','Die Hälfte wird gelöscht'],1,'Etwa alle vier Jahre gibt es nur noch halb so viele neue Bitcoin pro Block.', ["Wer hat Bitcoin erfunden?", ["Die Europäische Zentralbank", "Ein Pizzabäcker", "Jemand, der sich Satoshi Nakamoto nennt", "Die Stadt Amsterdam"], 2, "Wer hinter dem Namen steckt, weiß bis heute niemand."]],
+   ['Was passiert, wenn du deinen privaten Schlüssel verlierst?',['Die Bank schickt einen neuen','Deine Bitcoin sind für immer weg','Satoshi hilft dir','Nichts, die Blockchain merkt es sich'],1,'Es gibt niemanden, der den Zugang wiederherstellen kann.'],
+   ['Wofür wurden 2010 10.000 Bitcoin ausgegeben?',['Für ein Auto','Für zwei Pizzen','Für ein Haus','Für einen Computer'],1,'Der berühmte Pizza Day am 22. Mai 2010.']
+  ]},
+{ id:'tresor',
+  src:[["Wikipedia: Goldpreis", "https://de.wikipedia.org/wiki/Goldpreis"], ["World Gold Council: Gold Demand Trends 2025 (englisch, PDF)", "https://www.gold.org/download/file/20498/FY_2025_GDT_Press_Release.pdf"], ["Wikipedia: Goldreserve", "https://de.wikipedia.org/wiki/Goldreserve"], ["Wikipedia: Anlagemünze", "https://de.wikipedia.org/wiki/Anlagemünze"], ["§ 25c UStG – Anlagegold ist umsatzsteuerfrei", "https://www.gesetze-im-internet.de/ustg_1980/__25c.html"], ["Finanztip: Gold als Geldanlage", "https://www.finanztip.de/gold/"]], name:'Tresor', topic:'Gold als Geldanlage',
+  moni:'Gold war jahrtausendelang Geld. Sollte ich mir heute welches kaufen?',
+  cards:[
+   ['Gold zahlt keine Zinsen','Gold bringt weder Zinsen noch Dividenden. Du verdienst nur, wenn jemand später mehr dafür bezahlt. Lagern und versichern kostet sogar Geld.'],
+   ['Der Krisenschutz','In Krisen, Kriegen und bei hoher Inflation ist Gold oft gefragt. Zentralbanken kauften 2022, 2023 und 2024 jeweils über 1.000 Tonnen, 2025 rund 863 Tonnen. In den Jahren 2024 bis 2026 stieg der Goldpreis immer wieder auf neue Rekorde.', "Wenn die Leute Angst haben, zum Beispiel in Krisen, kaufen sie gern Gold. Auch Zentralbanken kaufen seit ein paar Jahren besonders viel Gold."],
+   ['Gold kann lange schlafen','1980 kostete eine Unze rund 850 Dollar. Erst 2008 war dieser Preis wieder erreicht – 28 Jahre ohne Gewinn. Rechnet man die Inflation heraus, dauerte es noch länger.', "1980 war Gold sehr teuer. Danach dauerte es 28 Jahre, bis es wieder so viel kostete. So lange ohne Gewinn – das muss man aushalten."],
+   ['Barren, Münzen, Spread','Gold gibt es als Barren und Anlagemünzen (Krügerrand, Maple Leaf, Wiener Philharmoniker). Händler kaufen billiger an, als sie verkaufen – das ist der Spread. Bei kleinen Barren ist der Aufschlag besonders hoch.', "Gold kauft man als Barren oder Münzen. Der Händler verkauft teurer, als er zurückkauft. Den Unterschied behält er."],
+   ['Steuern beim Gold','Anlagegold ist in Deutschland mehrwertsteuerfrei, und Gewinne aus physischem Gold sind nach einem Jahr Haltedauer steuerfrei. Silber dagegen ist mehrwertsteuerpflichtig – das macht es teurer im Kauf.', null],
+   ['Deutschlands Goldschatz','Die Bundesbank besitzt rund 3.350 Tonnen Gold – nach den USA der zweitgrößte Goldschatz der Welt. Ein Teil liegt in Frankfurt, ein Teil in New York und London.']
+  ],
+  fact:'Viele Ratgeber empfehlen Gold höchstens als Beimischung von 5 bis 10 % des Vermögens – als Versicherung, nicht als Renditebringer.',
+  quiz:[
+   ['Bringt Gold Zinsen oder Dividenden?',['Ja, jährlich 2 %','Nein, man verdient nur an Preissteigerungen','Ja, aber nur Barren','Nur bei der Bundesbank'],1,'Gold liegt einfach da.'],
+   ['Wann sind Gewinne aus physischem Gold in Deutschland steuerfrei?',['Sofort','Nach einem Jahr Haltedauer','Nach zehn Jahren','Nie'],1,'Wie bei Bitcoin gilt die Ein-Jahres-Frist.', ["Warum kaufen Leute in Krisen gern Gold?", ["Weil es Zinsen zahlt", "Weil sie ihm vertrauen, wenn sie Angst haben", "Weil es dann billig ist", "Weil man es essen kann"], 1, "Gold gilt als sicherer Hafen – Zinsen bringt es aber keine."]],
+   ['Welches Land hat die zweitgrößten Goldreserven der Welt?',['Schweiz','Deutschland','China','Frankreich'],1,'Nach den USA: Deutschland mit rund 3.350 Tonnen.'],
+   ['Wie lange dauerte es, bis der Goldpreis von 1980 wieder erreicht war?',['2 Jahre','10 Jahre','28 Jahre','Er wurde nie wieder erreicht'],2,'Von 1980 bis 2008 – Gold kann sehr lange schlafen.']
+  ]}
+];
+
+const SORT_ITEMS = [
+  ['ETF-Sparplan, 50 € im Monat','I','Kauft Anteile an Firmen, die Gewinne machen.'],
+  ['Streaming-Abo','K','Unterhaltung – schön, aber weg, sobald du kündigst.'],
+  ['Weiterbildung zur Meisterin','I','Bringt später ein höheres Einkommen.'],
+  ['Das neueste Handy','K','Verliert schnell an Wert. Brauchst du es beruflich, kann es anders aussehen.'],
+  ['Nähmaschine für den Etsy-Shop','I','Werkzeug, mit dem du Geld verdienst.'],
+  ['Wochenendtrip nach Rom','K','Erlebnis statt Rendite – völlig okay, wenn es eingeplant ist.'],
+  ['Notgroschen aufs Tagesgeld','I','Kleiner Zins, vor allem aber Schutz vor teuren Krediten.'],
+  ['Markenschuhe auf Raten','K','Konsum plus Zinsen – die teuerste Kombination.']
+];
+
+/* ---------- Spielstand ---------- */
+const KEY = 'whats-money-v1';
+const fresh = () => ({ money:1000, best:{}, free:false, mode:'einfach' });
+let S = fresh();
+try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign(fresh(), JSON.parse(raw)); } catch(e) {}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) {} }
+
+const $ = s => document.querySelector(s);
+const view = $('#view');
+const eur = n => Math.round(n).toLocaleString('de-DE') + ' €';
+const starsOf = sc => sc >= 4 ? 3 : sc === 3 ? 2 : sc === 2 ? 1 : 0;
+const starStr = n => '★'.repeat(n) + '<i>' + '★'.repeat(3 - n) + '</i>';
+const isDone = id => S.best[id] !== undefined;
+const unlocked = i => S.free || i === 0 || isDone(STATIONS[i].id) || isDone(STATIONS[i-1].id);
+/* Inhalt einer Station im gewählten Modus. Einfach: Karte [Titel, Text, leicht] – leicht ist ein Text, eine Ersatzkarte oder null (ausblenden);
+   Quizfrage [..., leicht] als Ersatzfrage; st.easy ersetzt ganze Felder. */
+function sv(st){
+  if (pro()) return { topic:st.topic, moni:st.moni, fact:st.fact, cards:st.cards.map(c=>c.slice(0,2)), quiz:st.quiz.map(q=>q.slice(0,4)) };
+  const e = st.easy || {};
+  return { topic:e.topic||st.topic, moni:e.moni||st.moni, fact:e.fact||st.fact,
+    cards: e.cards || st.cards.map(c => c[2]===undefined ? c.slice(0,2) : c[2]===null ? null : typeof c[2]==='string' ? [c[0],c[2]] : c[2]).filter(Boolean),
+    quiz: e.quiz || st.quiz.map(q => q[4] || q.slice(0,4)) };
+}
+const simOpen = () => S.free || isDone('zins');
+const totalStars = () => STATIONS.reduce((a,s) => a + (isDone(s.id) ? starsOf(S.best[s.id]) : 0), 0);
+const pro = () => S.mode === 'profi';
+function modeSwitch(locked){
+  return `<div class="seg" role="group" aria-label="Schwierigkeit"><span class="label">Schwierigkeit</span>${[['einfach','Einfach'],['profi','Profi']].map(([m,t])=>
+    `<button data-mode="${m}" aria-pressed="${S.mode===m}" ${locked?'disabled':''}>${t}</button>`).join('')}</div>`;
+}
+function bindMode(after){ view.querySelectorAll('.seg button').forEach(b => b.onclick = () => { if (S.mode === b.dataset.mode) return; S.mode = b.dataset.mode; save(); after(); const f = view.querySelector(`.seg button[data-mode="${S.mode}"]`); if (f && !f.disabled) f.focus(); }); }
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const shuffle = a => { a = a.slice(); for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+
+/* ---------- Moni ---------- */
+function moni(mood='happy', big=false){
+  const mouth = {
+    happy:'<path d="M40 66 Q50 76 60 66" stroke="#3B2A06" stroke-width="3.5" fill="none" stroke-linecap="round"/>',
+    wow:'<ellipse cx="50" cy="68" rx="5" ry="6" fill="#3B2A06"/>',
+    sad:'<path d="M41 71 Q50 63 59 71" stroke="#3B2A06" stroke-width="3.5" fill="none" stroke-linecap="round"/>',
+    think:'<path d="M42 69 L58 67" stroke="#3B2A06" stroke-width="3.5" fill="none" stroke-linecap="round"/>'
+  }[mood];
+  return `<svg class="moni${big?' big':''}" viewBox="0 0 100 100" role="img" aria-label="Moni, eine Münze mit Gesicht">
+    <g class="body">
+      <path d="M14 58 Q4 50 8 40" stroke="#A87618" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M86 58 Q96 50 92 40" stroke="#A87618" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <circle cx="50" cy="52" r="38" fill="#A87618"/>
+      <circle cx="50" cy="50" r="38" fill="#E3B341"/>
+      <circle cx="50" cy="50" r="31" fill="none" stroke="#F6DA86" stroke-width="2" stroke-dasharray="3 4"/>
+      <ellipse cx="38" cy="30" rx="10" ry="5" fill="#F9E6A8" opacity=".7"/>
+      <circle cx="39" cy="50" r="5.5" fill="#3B2A06"/><circle cx="61" cy="50" r="5.5" fill="#3B2A06"/>
+      <circle cx="41" cy="48" r="1.8" fill="#fff"/><circle cx="63" cy="48" r="1.8" fill="#fff"/>
+      <circle cx="31" cy="60" r="4" fill="#E8875A" opacity=".45"/><circle cx="69" cy="60" r="4" fill="#E8875A" opacity=".45"/>
+      ${mouth}
+    </g></svg>`;
+}
+
+/* ---------- Kopfzeile ---------- */
+function wallet(plus){
+  $('#wallet').innerHTML = `
+    <div class="chip gold"><span class="label">Monis Geld</span><b class="num">${eur(S.money)}</b></div>
+    <div class="chip"><span class="label">Wissenssterne</span><b class="num">${totalStars()} / ${STATIONS.length*3}</b></div>`;
+  if (plus){ const p=document.createElement('span'); p.className='plus'; p.textContent='+'+eur(plus); $('#wallet').appendChild(p); setTimeout(()=>p.remove(),1300); }
+}
+$('#moniTop').innerHTML = moni('happy');
+$('#home').onclick = () => showMap();
+
+/* ---------- Karte ---------- */
+function showMap(){
+  cur = null;
+  const done = STATIONS.filter(s=>isDone(s.id)).length;
+  const next = STATIONS.find(s=>!isDone(s.id));
+  const line = done === 0
+    ? 'Hallo! Ich bin <b>Moni</b>. Ich habe <b>1.000 €</b> gespart und will sie gewinnbringend anlegen. Nur: Ich weiß nicht mal genau, was Geld eigentlich <i>ist</i>. Begleitest du mich durch die Stadt des Geldes? Für jede richtige Antwort bekomme ich 25 € Wissensbonus dazu.'
+    : next ? `Schon ${done} von ${STATIONS.length} Stationen geschafft! Als Nächstes: <b>${next.name}</b>.${simOpen()?' Im <b>Anlage-Simulator</b> kannst du jederzeit ausprobieren, was aus meinem Geld wird.':''}`
+    : 'Alle Stationen geschafft! Jetzt weiß ich, was Geld ist. Ab in den <b>Anlage-Simulator</b> – mal sehen, was aus meinem Geld in 25 Jahren wird.';
+  view.innerHTML = `
+    <section class="say">${moni(done===STATIONS.length?'wow':'happy',true)}<div class="bubble"><p>${line}</p></div></section>
+    <section class="grid" aria-label="Stationen">
+      ${STATIONS.map((s,i)=>`
+        <button class="st${isDone(s.id)?' done':''}" data-i="${i}" ${unlocked(i)?'':'disabled'}>
+          <span class="c">${i+1}</span>
+          <span class="t"><strong>${s.name}</strong><span>${sv(s).topic}</span>
+          <span class="stars">${isDone(s.id)?starStr(starsOf(S.best[s.id])):unlocked(i)?'<i>★★★</i>':'gesperrt'}</span></span>
+        </button>`).join('')}
+      <button class="st final" id="toSim" ${simOpen()?'':'disabled'}>
+        <span class="c">€</span>
+        <span class="t"><strong>Anlage-Simulator</strong><span>${simOpen()?'Verteile Monis Geld und spiele 25 Jahre durch – Gewinne mitnehmen, Verluste realisieren, neu anlegen. Jede geschaffte Station schaltet eine neue Anlage frei.':`Öffnet sich nach Station ${STATIONS.findIndex(s=>s.id==='zins')+1}, dem Zinseszins-Garten.`}</span></span>
+      </button>
+    </section>
+    <div class="row between">
+      <label class="toggle"><input type="checkbox" id="free" ${S.free?'checked':''}> Alle Stationen frei wählen</label>
+      ${modeSwitch(false)}
+      <button class="mini" id="reset">Spielstand löschen</button>
+    </div>
+    <div class="panel" id="resetBox" hidden>
+      <p>Wirklich alles zurücksetzen? Moni startet dann wieder mit 1.000 € und ohne Sterne.</p>
+      <div class="row"><button class="btn" id="resetNo">Abbrechen</button><button class="btn primary" id="resetYes">Ja, neu anfangen</button></div>
+    </div>`;
+  view.querySelectorAll('.st[data-i]').forEach(b => b.onclick = () => startStation(+b.dataset.i));
+  $('#toSim').onclick = showSim;
+  $('#free').onchange = e => { S.free = e.target.checked; save(); showMap(); };
+  bindMode(showMap);
+  $('#reset').onclick = () => { $('#resetBox').hidden = false; };
+  $('#resetNo').onclick = () => { $('#resetBox').hidden = true; };
+  $('#resetYes').onclick = () => { S = fresh(); save(); wallet(); showMap(); };
+  wallet();
+  window.scrollTo({top:0});
+}
+
+/* ---------- Station ---------- */
+let cur = null;
+function startStation(i){
+  const st = STATIONS[i];
+  const v = sv(st);
+  cur = { i, st, v, phase:'cards', ci:-1, qi:0, score:0, qs: v.quiz.map(q => ({ q:q[0], a:shuffle(q[1].map((t,k)=>({t,ok:k===q[2]}))), e:q[3] })) };
+  renderStation();
+}
+function head(){
+  const st = cur.st;
+  return `<div class="crumbs"><button class="back" id="back">← Karte</button><span class="label">Station ${cur.i+1} von ${STATIONS.length}</span></div>
+          <h2>${st.name}: ${cur.v.topic}</h2>`;
+}
+function renderStation(){
+  const st = cur.st;
+  let body = '';
+  if (cur.phase === 'cards'){
+    const all = cur.v.cards.length + 1;
+    if (cur.ci === -1){
+      body = `<div class="say">${moni('think',true)}<div class="bubble"><p>${cur.v.moni}</p></div></div>
+        <div class="row"><button class="btn primary" id="next">Los geht's</button></div>`;
+    } else {
+      const isFact = cur.ci === cur.v.cards.length;
+      const c = isFact ? ['Wusstest du?', cur.v.fact] : cur.v.cards[cur.ci];
+      body = `<article class="lesson${isFact?' fact':''}"><h3>${c[0]}</h3><p>${c[1]}</p></article>
+        <div class="dots" aria-hidden="true">${Array.from({length:all},(_,k)=>`<span class="${k<=cur.ci?'on':''}"></span>`).join('')}</div>
+        <div class="row"><button class="btn" id="prev">Zurück</button><button class="btn primary" id="next">${isFact ? (st.extra?'Ausprobieren':'Zum Quiz') : 'Weiter'}</button></div>`;
+    }
+  } else if (cur.phase === 'extra'){
+    body = EXTRAS[st.extra].html() + `<div class="row"><button class="btn primary" id="next">Zum Quiz</button></div>`;
+  } else if (cur.phase === 'quiz'){
+    const q = cur.qs[cur.qi];
+    body = `<p class="label">Frage ${cur.qi+1} von ${cur.qs.length} · richtig: ${cur.score}</p>
+      <h3>${q.q}</h3>
+      <div class="answers">${q.a.map((a,k)=>`<button class="ans" data-k="${k}">${a.t}</button>`).join('')}</div>
+      <div id="fb"></div>`;
+  } else {
+    body = cur.resultHtml;
+  }
+  const showSrc = st.src && cur.phase !== 'quiz' && !(cur.phase === 'cards' && cur.ci === -1);
+  view.innerHTML = `<section class="panel">${head()}${body}${showSrc ? srcBox(st.src, 'Quellen zu dieser Station') : ''}</section>`;
+  $('#back').onclick = showMap;
+  const nx = $('#next'), pv = $('#prev');
+  if (pv) pv.onclick = () => { cur.ci--; renderStation(); };
+  if (nx) nx.onclick = () => {
+    if (cur.phase === 'cards'){
+      if (cur.ci < cur.v.cards.length) cur.ci++;
+      else cur.phase = st.extra ? 'extra' : 'quiz';
+    } else if (cur.phase === 'extra') cur.phase = 'quiz';
+    renderStation();
+  };
+  if (cur.phase === 'extra') EXTRAS[st.extra].init();
+  if (cur.phase === 'quiz') view.querySelectorAll('.ans').forEach(b => b.onclick = () => answer(+b.dataset.k));
+  if (cur.phase === 'done'){ $('#again').onclick = () => startStation(cur.i); const n=$('#goNext'); if(n) n.onclick = () => startStation(cur.i+1); const s=$('#goSim'); if(s) s.onclick = showSim; }
+}
+function srcBox(list, title){
+  return `<details class="info src"><summary>${title}</summary><ul>${list.map(([t,u]) => `<li>${u ? `<a href="${u}" target="_blank" rel="noopener">${t}</a>` : t}</li>`).join('')}</ul></details>`;
+}
+const SIM_SRC = [
+  ['Wikipedia: MSCI World (Renditen und Crashs des Weltindex)','https://de.wikipedia.org/wiki/MSCI_World'],
+  ['Wikipedia: Goldpreis','https://de.wikipedia.org/wiki/Goldpreis'],
+  ['Wikipedia: Bitcoin','https://de.wikipedia.org/wiki/Bitcoin'],
+  ['Wikipedia: Abgeltungsteuer','https://de.wikipedia.org/wiki/Abgeltungsteuer_(Deutschland)'],
+  ['Wikipedia: Sparer-Pauschbetrag','https://de.wikipedia.org/wiki/Sparer-Pauschbetrag'],
+  ['§ 23 EStG – Gold und Bitcoin nach einem Jahr steuerfrei','https://www.gesetze-im-internet.de/estg/__23.html'],
+  ['Renditen, Schwankungen und Pleiterisiko im Spiel: eigene, grob gerundete Annahmen – keine Prognose',null]
+];
+function answer(k){
+  const q = cur.qs[cur.qi], ok = q.a[k].ok;
+  if (ok) cur.score++;
+  view.querySelectorAll('.ans').forEach((b,j) => { b.disabled = true; if (q.a[j].ok) b.classList.add('right'); else if (j===k) b.classList.add('wrong'); });
+  const last = cur.qi === cur.qs.length - 1;
+  $('#fb').innerHTML = `<div class="say">${moni(ok?'wow':'sad')}<div class="bubble expl${ok?'':' bad'}"><p><b>${ok?'Richtig!':'Knapp daneben.'}</b> ${q.e}</p></div></div>
+    <div class="row" style="margin-top:12px"><button class="btn primary" id="qn">${last?'Auswertung':'Nächste Frage'}</button></div>`;
+  $('#qn').onclick = () => { if (last) finish(); else { cur.qi++; renderStation(); } };
+  $('#qn').focus();
+}
+function finish(){
+  const st = cur.st, prev = S.best[st.id];
+  const prevScore = prev === undefined ? 0 : prev;
+  let earned = 25 * Math.max(0, cur.score - prevScore);
+  if (cur.score === cur.qs.length && prevScore < cur.qs.length) earned += 100;
+  S.best[st.id] = Math.max(prevScore, cur.score);
+  if (prev === undefined && cur.score === 0) S.best[st.id] = 0;
+  S.money += earned; save();
+  const n = starsOf(cur.score);
+  const nextSt = STATIONS[cur.i+1];
+  const unlock = { bank:'Tagesgeld', boerse:'ETF Welt und Einzelaktie', krypto:'Bitcoin', tresor:'Gold' }[st.id];
+  const say = cur.score === cur.qs.length ? 'Alles richtig! Dafür gibt es 100 € Extrabonus.' : cur.score >= 2 ? 'Gut gemacht! Wenn du magst, versuch die Station nochmal für alle drei Sterne.' : 'Das war schwer. Lies die Karten nochmal – beim zweiten Mal sitzt es.';
+  cur.phase = 'done';
+  cur.resultHtml = `<div class="result-stars" aria-label="${n} von 3 Sternen">${starStr(n)}</div>
+    <div class="say">${moni(n>=2?'happy':'think',true)}<div class="bubble"><p>${cur.score} von ${cur.qs.length} richtig. ${say}
+      ${earned?`<br>Ich bekomme <b>${eur(earned)}</b> Wissensbonus.`:'<br>Diesmal kein neuer Bonus – den gibt es nur für ein besseres Ergebnis.'}
+      ${unlock?`<br>Neu im Simulator: <b>${unlock}</b>.`:''}
+      ${st.id==='zins'?'<br>Der <b>Anlage-Simulator</b> ist jetzt offen!':''}</p></div></div>
+    <div class="row"><button class="btn" id="again">Nochmal spielen</button>
+      ${nextSt?`<button class="btn primary" id="goNext">Weiter: ${nextSt.name}</button>`:`<button class="btn primary" id="goSim">Zum Anlage-Simulator</button>`}</div>`;
+  wallet(earned);
+  renderStation();
+}
+
+/* ---------- Mitmach-Werkzeuge ---------- */
+function slider(id, label, min, max, step, val, fmt){
+  return `<div class="sl"><label for="${id}"><span>${label}</span><b id="${id}V">${fmt(val)}</b></label>
+    <input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${val}"></div>`;
+}
+function bindSliders(ids, fmts, fn){
+  ids.forEach((id,k)=>{ const el=$('#'+id); el.oninput=()=>{ $('#'+id+'V').textContent=fmts[k](+el.value); fn(); }; });
+  fn();
+}
+function setupCanvas(cv){
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = w*dpr; cv.height = h*dpr; const ctx = cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w,h};
+}
+function niceMax(v){ if (v<=0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); for (const m of [1,1.5,2,2.5,3,4,5,6,8,10]) if (m*p >= v) return m*p; return 10*p; }
+function shortEur(v){ return v>=1e6 ? (v/1e6).toLocaleString('de-DE',{maximumFractionDigits:1})+' Mio' : v>=1e4 ? Math.round(v/1e3).toLocaleString('de-DE')+' Tsd' : Math.round(v).toLocaleString('de-DE'); }
+function axes(ctx,w,h,pad,ymax,xmax,xlab){
+  ctx.font = '12px "IBM Plex Mono", monospace'; ctx.fillStyle = css('--muted'); ctx.strokeStyle = css('--line'); ctx.lineWidth = 1;
+  for (let k=0;k<=4;k++){ const y = pad.t + (h-pad.t-pad.b)*(1-k/4); ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke(); ctx.textAlign='right'; ctx.textBaseline='middle'; ctx.fillText(shortEur(ymax*k/4), pad.l-6, y); }
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  const step = xmax>30?10:xmax>12?5:xmax>5?2:1;
+  for (let x=0;x<=xmax;x+=step){ const px = pad.l + (w-pad.l-pad.r)*x/xmax; ctx.fillText(x, px, h-pad.b+6); }
+  ctx.textAlign='right'; ctx.fillText(xlab, w-pad.r, h-14);
+}
+
+const EXTRAS = {
+  maschine:{
+    html:()=>`<div class="tool"><h3>Spiel Bank: Erschaffe Geld per Kredit</h3>
+      <p>Moni geht zur Bank und will 10.000 € leihen. Schau, was in der Bilanz der Bank passiert.</p>
+      <div class="ledger">
+        <div><h4>Aktiva (was der Bank gehört)</h4><div class="line"><span>Forderung: Kredit an Kunden</span><b id="mA">0 €</b></div><div class="line"><span>Guthaben bei der Zentralbank</span><b>5.000 €</b></div></div>
+        <div><h4>Passiva (was die Bank schuldet)</h4><div class="line"><span>Guthaben auf Kundenkonten</span><b id="mP">0 €</b></div><div class="line"><span>Eigenkapital</span><b>5.000 €</b></div></div>
+      </div>
+      <div class="kpis"><div class="kpi hl"><span class="label">Neues Buchgeld im Umlauf</span><b id="mM">0 €</b></div><div class="kpi"><span class="label">Davon nötige Mindestreserve (1 %)</span><b id="mR">0 €</b></div></div>
+      <div class="row"><button class="btn primary" id="mGive">Kredit über 10.000 € vergeben</button><button class="btn" id="mPay">10.000 € zurückzahlen</button></div>
+      <div class="say">${moni('wow')}<div class="bubble"><p id="mSay">Noch ist nichts passiert. Drück auf „Kredit vergeben“.</p></div></div></div>`,
+    init:()=>{
+      let k = 0;
+      const upd = (msg) => { $('#mA').textContent=eur(k*1e4); $('#mP').textContent=eur(k*1e4); $('#mM').textContent=eur(k*1e4); $('#mR').textContent=eur(k*100); $('#mPay').disabled = k===0; $('#mGive').disabled = k>=5; if(msg) $('#mSay').innerHTML=msg; };
+      $('#mGive').onclick = () => { k++; upd(k===1?'Die Bank hat mir 10.000 € aufs Konto geschrieben – und niemand anderem etwas weggenommen. Beide Seiten der Bilanz sind gewachsen. <b>Dieses Geld gab es vorher nicht.</b>':k>=5?'Stopp! Die Bank hat nur 5.000 € Eigenkapital. Die Regeln erlauben ihr nicht unendlich viele Kredite.':`Jetzt sind ${eur(k*1e4)} neues Geld im Umlauf. Die Bank braucht dafür nur ${eur(k*100)} Mindestreserve.`); };
+      $('#mPay').onclick = () => { k--; upd(k===0?'Alles zurückgezahlt: Forderung und Guthaben sind verschwunden. <b>Das Geld ist wieder weg</b> – es hat sich in Luft aufgelöst.':'Ein Kredit getilgt – und genau so viel Buchgeld ist verschwunden.'); };
+      upd();
+    }},
+  zins:{
+    html:()=>`<div class="tool"><h3>Pflanze dein Geld</h3>
+      <p>Stell ein, wie viel Moni anlegt und wie lange. Gold zeigt, was der Zinseszins dazu legt.</p>
+      <div class="sliders">
+        ${slider('zS','Startbetrag',0,20000,500,1000,eur)}
+        ${slider('zM','Sparrate pro Monat',0,1000,10,50,eur)}
+        ${slider('zR','Zins pro Jahr',0,12,0.5,7,v=>v.toLocaleString('de-DE')+' %')}
+        ${slider('zJ','Jahre',1,50,1,30,v=>v+' J.')}
+      </div>
+      <div class="kpis"><div class="kpi hl"><span class="label">Endbetrag</span><b id="zE"></b></div><div class="kpi"><span class="label">Selbst eingezahlt</span><b id="zP"></b></div><div class="kpi"><span class="label">Durch Zinsen</span><b id="zZ"></b></div><div class="kpi"><span class="label">Verdopplung nach (72er-Regel)</span><b id="zD"></b></div></div>
+      <canvas id="zC" aria-label="Diagramm: eingezahltes Geld und Zinsen über die Jahre"></canvas>
+      <div class="legend"><span style="--k:var(--mint)">Selbst eingezahlt</span><span style="--k:var(--gold)">Zinsen und Zinseszinsen</span></div></div>`,
+    init:()=>{
+      const draw = () => {
+        const S0=+$('#zS').value, M=+$('#zM').value, r=+$('#zR').value/100, J=+$('#zJ').value;
+        let b=S0, paid=S0; const bal=[b], pd=[paid];
+        for (let y=1;y<=J;y++){ for (let m=0;m<12;m++){ b = b*(1+r/12) + M; paid += M; } bal.push(b); pd.push(paid); }
+        $('#zE').textContent=eur(b); $('#zP').textContent=eur(paid); $('#zZ').textContent=eur(b-paid); $('#zD').textContent= r>0 ? '≈ '+(72/(r*100)).toLocaleString('de-DE',{maximumFractionDigits:1})+' Jahren' : 'nie';
+        const {ctx,w,h}=setupCanvas($('#zC')); const pad={l:58,r:10,t:10,b:28}; const ymax=niceMax(Math.max(...bal));
+        axes(ctx,w,h,pad,ymax,J,'Jahre');
+        const X=y=>pad.l+(w-pad.l-pad.r)*y/J, Y=v=>pad.t+(h-pad.t-pad.b)*(1-v/ymax);
+        const area=(arr,base,col)=>{ ctx.beginPath(); arr.forEach((v,y)=>y?ctx.lineTo(X(y),Y(v)):ctx.moveTo(X(y),Y(v))); for(let y=J;y>=0;y--) ctx.lineTo(X(y),Y(base?base[y]:0)); ctx.closePath(); ctx.fillStyle=col; ctx.fill(); };
+        ctx.globalAlpha=.85; area(bal,pd,css('--gold')); area(pd,null,css('--mint')); ctx.globalAlpha=1;
+      };
+      bindSliders(['zS','zM','zR','zJ'],[eur,eur,v=>v.toLocaleString('de-DE')+' %',v=>v+' J.'],draw);
+      EXTRAS.zins.redraw = draw;
+    }},
+  kredit:{
+    html:()=>`<div class="tool"><h3>Der Kreditrechner</h3>
+      <p>Moni möchte etwas auf Kredit kaufen. Spiel mit Zins und Laufzeit und schau, was es am Ende wirklich kostet.</p>
+      <div class="sliders">
+        ${slider('kB','Kreditbetrag',500,50000,500,10000,eur)}
+        ${slider('kZ','Effektiver Jahreszins',0,20,0.5,7,v=>v.toLocaleString('de-DE')+' %')}
+        ${slider('kL','Laufzeit',6,120,6,60,v=>v+' Monate')}
+      </div>
+      <div class="kpis"><div class="kpi hl"><span class="label">Monatsrate</span><b id="kR"></b></div><div class="kpi"><span class="label">Zinsen insgesamt</span><b id="kI"></b></div><div class="kpi"><span class="label">Zinsanteil 1. Rate</span><b id="kF"></b></div><div class="kpi"><span class="label">Zinsanteil letzte Rate</span><b id="kE"></b></div></div>
+      <div class="say">${moni('think')}<div class="bubble"><p id="kSay"></p></div></div></div>`,
+    init:()=>{
+      const f=v=>v.toLocaleString('de-DE')+' %';
+      const calc = () => {
+        const P=+$('#kB').value, i=+$('#kZ').value/100/12, n=+$('#kL').value;
+        const rate = i===0 ? P/n : P*i/(1-Math.pow(1+i,-n));
+        const total = rate*n - P;
+        let rest=P, firstI=P*i, lastI=0; for(let m=0;m<n;m++){ const z=rest*i; lastI=z; rest-= (rate-z); }
+        $('#kR').textContent=eur(rate); $('#kI').textContent=eur(total); $('#kF').textContent=eur(firstI); $('#kE').textContent=eur(lastI);
+        $('#kSay').innerHTML = total<=0 ? 'Null Prozent? Schön wär’s – achte dann auf versteckte Kosten wie Restschuldversicherungen.' : `Für ${eur(P)} zahle ich am Ende <b>${eur(P+total)}</b> zurück. ${total/P>0.25?'Das ist mehr als ein Viertel extra – lohnt sich der Kauf wirklich?':'Je kürzer die Laufzeit, desto weniger Zinsen – aber desto höher die Rate.'}`;
+      };
+      bindSliders(['kB','kZ','kL'],[eur,f,v=>v+' Monate'],calc);
+    }},
+  markt:{
+    html:()=>`<div class="tool"><h3>Monis Limonadenstand</h3>
+      <p>Moni verkauft Limonade. Stell den Preis ein und schau, wie viele Leute kaufen wollen und wie viele Becher Moni dafür machen möchte.</p>
+      ${slider('lP','Preis pro Becher',0.25,3,0.25,1,v=>v.toLocaleString('de-DE',{style:'currency',currency:'EUR'}))}
+      <div class="row"><button class="mini" id="lHeat" aria-pressed="false">Hitzewelle: alle haben Durst</button><button class="mini" id="lCap" aria-pressed="false">Der Staat bestimmt: höchstens 1 €</button></div>
+      <div class="bars">
+        <div class="bar"><span>Leute wollen kaufen</span><i id="lDb" style="--c:var(--gold)"></i><b id="lD"></b></div>
+        <div class="bar"><span>Moni will verkaufen</span><i id="lSb" style="--c:var(--mint)"></i><b id="lS"></b></div>
+      </div>
+      <div class="kpis"><div class="kpi hl"><span class="label">Verkaufte Becher</span><b id="lQ"></b></div><div class="kpi"><span class="label">Gehen leer aus</span><b id="lM"></b></div><div class="kpi"><span class="label">Bleiben übrig</span><b id="lU"></b></div></div>
+      <div class="say">${moni('think')}<div class="bubble"><p id="lSay"></p></div></div></div>`,
+    init:()=>{
+      let heat=false, cap=false;
+      const fmt=v=>v.toLocaleString('de-DE',{style:'currency',currency:'EUR'});
+      const calc = () => {
+        const el=$('#lP'); if (cap && +el.value>1){ el.value=1; $('#lPV').textContent=fmt(1); }
+        const p=+el.value, D=Math.max(0,Math.round((heat?160:120)-40*p)), Sv=Math.max(0,Math.round(40*p-20)), Q=Math.min(D,Sv);
+        const eq = heat ? 2.25 : 1.75;
+        $('#lD').textContent=D+' Becher'; $('#lS').textContent=Sv+' Becher'; $('#lDb').style.width=(D/160*100)+'%'; $('#lSb').style.width=(Sv/160*100)+'%';
+        $('#lQ').textContent=Q; $('#lM').textContent=Math.max(0,D-Sv); $('#lU').textContent=Math.max(0,Sv-D);
+        let t;
+        if (D-Sv > 5) t = (Sv === 0 ? `${D} Leute wollen kaufen, aber für ${fmt(p)} lohnt es sich für mich gar nicht, Limonade zu machen. ` : `${D} Leute wollen kaufen, aber ich mache nur ${Sv} Becher – ${D-Sv} gehen leer aus. Eine lange Schlange! `)+(cap
+          ? 'Ich darf aber nicht mehr als 1 € verlangen. Dann lohnt es sich nicht, mehr Limonade zu machen – der Mangel bleibt. So ähnlich war es in der Planwirtschaft.'
+          : `Bei so vielen Käufern kann ich mehr verlangen – und dann lohnt es sich auch, mehr Limonade zu machen.${heat?' Die Hitzewelle hat die Nachfrage nach oben getrieben.':''}`);
+        else if (Sv-D > 5) t = `Ich habe ${Sv} Becher gemacht, aber ${D === 0 ? 'zu diesem Preis will niemand kaufen' : `nur ${D} Leute wollen sie zu diesem Preis`}. ${Sv-D} Becher bleiben übrig. Ich sollte billiger werden.`;
+        else t = `Passt! Fast genau so viele wollen kaufen, wie ich verkaufen will. Das ist der <b>Marktpreis</b> – hier um ${fmt(eq)}. Ich verkaufe ${Q} Becher und nehme ${fmt(Q*p)} ein.`;
+        $('#lSay').innerHTML = t;
+      };
+      const tog = (id, fn) => { const b=$(id); b.onclick=()=>{ const on=b.getAttribute('aria-pressed')!=='true'; b.setAttribute('aria-pressed',on); fn(on); calc(); }; };
+      tog('#lHeat', on => heat=on); tog('#lCap', on => cap=on);
+      bindSliders(['lP'],[fmt],calc);
+    }},
+  sortieren:{
+    html:()=>`<div class="tool"><h3>Konsum oder Investition?</h3>
+      <p>Hilf Moni beim Sortieren. Manchmal kommt es auf die Situation an – hier zählt der typische Fall.</p>
+      <div class="sort">${SORT_ITEMS.map((it,k)=>`<div class="it" id="so${k}"><span>${it[0]}<small id="sx${k}"></small></span><span class="row"><button class="mini" data-k="${k}" data-v="K">Konsum</button><button class="mini" data-k="${k}" data-v="I">Investition</button></span></div>`).join('')}</div>
+      <p class="label" id="soScore">0 von ${SORT_ITEMS.length} richtig</p></div>`,
+    init:()=>{
+      let right=0;
+      view.querySelectorAll('.sort .mini').forEach(b=>b.onclick=()=>{
+        const k=+b.dataset.k, it=SORT_ITEMS[k], ok=b.dataset.v===it[1];
+        if (ok) right++;
+        $('#so'+k).classList.add(ok?'ok':'no');
+        $('#sx'+k).textContent=(ok?'Richtig: ':'Eher '+(it[1]==='K'?'Konsum':'Investition')+': ')+it[2];
+        $('#so'+k).querySelectorAll('button').forEach(x=>x.disabled=true);
+        $('#soScore').textContent=right+' von '+SORT_ITEMS.length+' richtig';
+      });
+    }}
+};
+
+/* ---------- Anlage-Simulator ---------- */
+const ASSETS = [
+  { id:'cash', name:'Unterm Kopfkissen', note:'Bargeld, 0 % Zinsen', need:null, ret:()=>0 },
+  { id:'konsum', name:'Sofort ausgeben', note:'Ein toller Urlaub – danach ist das Geld weg', need:null, ret:null },
+  { id:'tages', name:'Tagesgeld', note:'Sicher, rund 2 % Zinsen', need:'bank', tax:'kap', ret:()=>0.02 },
+  { id:'etf', name:'ETF Welt', note:'1.300 Firmen weltweit, schwankt', need:'boerse', tax:'kap', ret:()=>Math.exp(0.06+0.15*randn())-1 },
+  { id:'aktie', name:'Eine Einzelaktie', note:'Eine Firma – kann steigen oder pleitegehen', need:'boerse', tax:'kap', ret:()=> Math.random()<0.02 ? -1 : Math.exp(0.035+0.35*randn())-1 },
+  { id:'gold', name:'Gold', note:'Keine Zinsen, Krisenschutz', need:'tresor', tax:'frei', ret:()=>Math.exp(0.035+0.14*randn())-1 },
+  { id:'btc', name:'Bitcoin', note:'Extrem schwankend', need:'krypto', tax:'frei', ret:()=>Math.exp(0.10+0.75*randn())-1 }
+];
+const TRADE = ASSETS.filter(a => a.tax);
+const YEARS = 25, TAX = 0.26375, FREI = 1000;   // Abgeltungsteuer + Soli, Sparerpauschbetrag pro Jahr
+function randn(){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+const avail = a => !a.need || S.free || isDone(a.need);
+const sgn = n => (n>=0?'+':'−') + eur(Math.abs(n));
+const pct = x => (x>=0?'+':'−') + Math.abs(Math.round(x*100)) + ' %';
+let alloc = { cash:100 }, simTimer = null, G = null;
+
+function showSim(){
+  cur = null; clearInterval(simTimer); G = null;
+  ASSETS.forEach(a => { if (!avail(a)) delete alloc[a.id]; });
+  view.innerHTML = `<section class="panel">
+    <div class="crumbs"><button class="back" id="back">← Karte</button><span class="label">Finale</span></div>
+    <div class="row between"><h2>Anlage-Simulator</h2><span id="simMode"></span></div>
+    <div class="say"><span id="simMoni" style="flex:none">${moni('think',true)}</span><div class="bubble"><p id="simSay">Ich habe <b>${eur(S.money)}</b>. Wie soll ich sie verteilen? Wir spielen <b>${YEARS} Jahre</b> durch – Jahr für Jahr. Unterwegs kann ich <b>Gewinne mitnehmen</b>, <b>Verluste realisieren</b> und das Geld <b>neu anlegen</b>. Was nicht verteilt ist, liegt unterm Kopfkissen.</p></div></div>
+    <div id="simCtl"></div>
+    <canvas id="sC" aria-label="Diagramm: Wert von Monis Vermögen über die Jahre"></canvas>
+    <div class="legend"><span style="--k:var(--mint)">Vermögen</span><span style="--k:var(--gold)">Kaufkraft in heutigen Euro</span><span style="--k:var(--muted)">Startgeld</span></div>
+    <div class="news" id="news" aria-live="polite"><span>Noch keine Nachrichten. Verteile das Geld und starte.</span></div>
+    <div id="simRes"></div>
+    ${pro() ? `<details class="info"><summary>So rechnet Moni die Steuern</summary>
+      <ul><li>Steuer fällt erst an, wenn du <b>verkaufst</b> – Buchgewinne sind steuerfrei, solange du hältst.</li>
+      <li>Auf Gewinne aus Tagesgeld, ETF und Einzelaktie: <b>26,375 %</b> (25 % Abgeltungsteuer plus Soli).</li>
+      <li>Die ersten <b>1.000 €</b> Gewinn pro Spieljahr sind frei (Sparerpauschbetrag). Ein ungenutzter Rest verfällt am Jahresende.</li>
+      <li>Verluste werden sofort mit Gewinnen desselben Jahres verrechnet – bereits gezahlte Steuer kommt zurück. Was übrig bleibt, wandert in den <b>Verlusttopf</b> und mindert spätere Gewinne.</li>
+      <li>Gold und Bitcoin sind steuerfrei (in echt erst nach mehr als einem Jahr Haltedauer), ihre Verluste zählen aber auch nicht.</li>
+      <li>Nicht abgebildet: Teilfreistellung (30 % bei Aktien-ETFs), Vorabpauschale, jährliche Besteuerung von Zinsen, Kirchensteuer und der getrennte Aktienverlusttopf. Mehr dazu in der Station <b>Finanzamt</b>.</li></ul></details>`
+    : `<details class="info"><summary>Und was ist mit Steuern?</summary>
+      <p>Im echten Leben gibt man von Gewinnen ungefähr ein Viertel als Steuer ab – aber erst, wenn man mehr als 1.000 € Gewinn im Jahr macht. Im Modus „Einfach“ lassen wir das weg. Im Modus „Profi“ rechnet Moni die Steuern mit. Was Steuern sind, erfährst du in der Station <b>Finanzamt</b>.</p></details>`}
+    <p class="label">Spielannahmen: Tagesgeld 2 %, ETF im Mittel gut 7 % bei starken Schwankungen, Einzelaktie mit 2 % Pleiterisiko pro Jahr, Gold gut 4 %, Bitcoin extrem schwankend, Inflation um 2,5 %.${pro()?` Steuern vereinfacht: 26,375 % (Abgeltungsteuer plus Soli, ohne Kirchensteuer und Teilfreistellung) auf Gewinne aus Tagesgeld, ETF und Aktie über 1.000 € Sparerpauschbetrag pro Jahr, fällig beim Verkauf; Verluste werden verrechnet. Gold und Bitcoin sind in Deutschland nach über einem Jahr Haltedauer steuerfrei – im Spiel immer.`:' Steuern lässt der Modus „Einfach“ weg – im Profi-Modus rechnet Moni sie mit.'} Keine Prognose.</p>
+    ${srcBox(SIM_SRC, 'Quellen zum Simulator')}
+  </section>`;
+  $('#back').onclick = () => { clearInterval(simTimer); showMap(); };
+  renderSetup(); drawSim(null); wallet(); renderMode();
+}
+function renderMode(){
+  const locked = !!(G && !G.done);
+  $('#simMode').innerHTML = modeSwitch(locked) ;
+  if (locked) $('#simMode .seg').insertAdjacentHTML('beforeend','<small>Umschalten geht nach dem Durchlauf.</small>');
+  bindMode(showSim);
+}
+function setSay(mood, html){ $('#simMoni').innerHTML = moni(mood,true); $('#simSay').innerHTML = html; }
+
+function renderSetup(){
+  $('#simCtl').innerHTML = `<div class="alloc">${ASSETS.filter(a=>a.id!=='cash').map(a=>{ const ok=avail(a); const st=STATIONS.findIndex(s=>s.id===a.need);
+      return `<div class="al${ok?'':' locked'}"><span class="nm"><b>${a.name}</b><small>${ok?a.note:'Frei nach Station '+(st+1)+': '+STATIONS[st].name}</small></span><span class="pc" id="p_${a.id}">${alloc[a.id]||0} %</span>
+      <input type="range" id="r_${a.id}" min="0" max="100" step="5" value="${alloc[a.id]||0}" ${ok?'':'disabled'} aria-label="Anteil ${a.name}"></div>`; }).join('')}
+      <div class="al"><span class="nm"><b>Unterm Kopfkissen</b><small>Der Rest. Kein Zins – die Inflation nagt daran.</small></span><span class="pc" id="p_cash"></span></div>
+    </div>
+    <div class="row"><button class="btn primary" id="run">Geld anlegen und los</button></div>`;
+  const upd = () => {
+    let sum=0; ASSETS.forEach(a=>{ if(a.id==='cash') return; const el=$('#r_'+a.id); alloc[a.id]=+el.value; sum+=alloc[a.id]; });
+    if (sum>100){ const last=document.activeElement; if(last && last.id && last.id.startsWith('r_')){ const id=last.id.slice(2); alloc[id]-= sum-100; last.value=alloc[id]; sum=100; } }
+    ASSETS.forEach(a=>{ if(a.id!=='cash') $('#p_'+a.id).textContent=(alloc[a.id]||0)+' %'; });
+    alloc.cash = 100-sum; $('#p_cash').textContent = alloc.cash+' %';
+  };
+  ASSETS.forEach(a=>{ if(a.id!=='cash') $('#r_'+a.id).oninput = upd; });
+  upd();
+  $('#run').onclick = startSim;
+}
+
+function startSim(){
+  const start = S.money;
+  G = { start, y:0, cash:start*(alloc.cash||0)/100, fun:start*(alloc.konsum||0)/100, pos:{}, price:1,
+        hist:[{tot:start, real:start}], news:[], pro:pro(), yGain:0, paidY:0, carry:0, taxTot:0, realTot:0,
+        trades:0, crashY:-1, panic:false, dip:false, busy:false, pause:true, done:false };
+  TRADE.forEach(a => { const v = start*(alloc[a.id]||0)/100; G.pos[a.id] = { val:v, cost:v, real:0 }; });
+  G.news.push('<span>Jahr 0: Das Geld ist angelegt. Los geht’s!</span>');
+  renderNews();
+  setSay('happy', `Jetzt läuft die Zeit. Nach jedem Jahr kann ich handeln: <b>Gewinne mitnehmen</b> (mit Plus verkaufen), <b>Verluste realisieren</b> (mit Minus verkaufen – erst dann ist der Verlust echt, vorher steht er nur auf dem Papier) und Bargeld <b>neu anlegen</b>.${G.pro?' Aber Vorsicht: Auf Gewinne über 1.000 € im Jahr zahle ich Steuern.':''}`);
+  renderPlay(); drawSim(G.hist); renderMode();
+}
+const total = () => G.cash + TRADE.reduce((s,a)=>s+G.pos[a.id].val, 0);
+function renderNews(){ $('#news').innerHTML = G.news.slice().reverse().join(''); }
+
+function renderPlay(focusId){
+  const fid = focusId || (document.activeElement && document.activeElement.id);
+  const off = G.busy || G.done;
+  const rows = TRADE.filter(avail).map(a => {
+    const p = G.pos[a.id], bg = p.val-p.cost, has = p.val>=0.5 || p.cost>=0.5;
+    const info = has ? `Eingesetzt ${eur(p.cost)} · <span class="${bg>=0?'gain':'loss'}">${G.pro?(bg>=0?'Buchgewinn':'Buchverlust'):(bg>=0?'Plus auf dem Papier':'Minus auf dem Papier')} ${sgn(bg)}${p.cost>=0.5?' ('+pct(bg/p.cost)+')':''}</span>` : a.note;
+    const sd = off || !has ? 'disabled' : '', bd = off || G.cash<1 ? 'disabled' : '';
+    return `<div class="al"><span class="nm"><b>${a.name}</b><small>${info}</small></span><span class="pc">${eur(p.val)}</span>
+      <div class="trade"><span class="grp"><span class="label">Verkaufen</span>
+        ${PARTS.map(([k,t,w])=>`<button class="mini" id="s_${a.id}_${k}" ${sd} aria-label="${a.name}: ${w} verkaufen">${t}</button>`).join('')}</span>
+        <span class="grp"><span class="label">Kaufen mit Bargeld</span>
+        ${PARTS.map(([k,t,w])=>`<button class="mini" id="b_${a.id}_${k}" ${bd} aria-label="${a.name}: mit ${w==='alles'?'dem ganzen':w+' des'} Bargeld${w==='alles'?'':'s'} kaufen">${t}</button>`).join('')}</span>
+        <span class="grp"><span class="label">Betrag</span>
+        <input type="number" class="amt" id="v_${a.id}" min="1" step="any" inputmode="decimal" placeholder="€" ${off||(!has&&G.cash<1)?'disabled':''} aria-label="${a.name}: Betrag in Euro">
+        <button class="mini" id="sv_${a.id}" ${sd} aria-label="${a.name}: Betrag verkaufen">verkaufen</button>
+        <button class="mini" id="bv_${a.id}" ${bd} aria-label="${a.name}: für Betrag kaufen">kaufen</button></span></div></div>`;
+  }).join('');
+  $('#simCtl').innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><span class="label">Jahr</span><b>${G.y} von ${YEARS}</b></div>
+      <div class="kpi hl"><span class="label">Vermögen</span><b>${eur(total())}</b></div>
+      <div class="kpi"><span class="label">${G.pro?'Realisiert':'Aus Verkäufen'}</span><b class="${G.realTot>=0?'gain':'loss'}">${sgn(G.realTot)}</b></div>
+      ${G.pro?`<div class="kpi"><span class="label">Steuern gezahlt</span><b>${eur(G.taxTot)}</b></div>`:''}
+      ${G.pro && G.carry+Math.min(0,G.yGain) < -0.5 ? `<div class="kpi"><span class="label">Verlusttopf</span><b class="loss">${sgn(G.carry+Math.min(0,G.yGain))}</b></div>` : ''}
+    </div>
+    <div class="alloc">${rows}
+      <div class="al"><span class="nm"><b>Bargeld</b><small>Rest und Geld aus Verkäufen. Kein Zins – bereit zum Neu-Anlegen.</small></span><span class="pc">${eur(G.cash)}</span></div>
+    </div>
+    ${G.done ? `<div class="row"><button class="btn primary" id="again">Nochmal von vorn</button></div>` : `
+    <div class="row"><button class="btn primary" id="y1" ${off?'disabled':''}>1 Jahr weiter</button><button class="btn" id="y5" ${off?'disabled':''}>5 Jahre weiter</button><button class="btn" id="yE" ${off?'disabled':''}>Bis Jahr ${YEARS}</button></div>
+    <label class="toggle"><input type="checkbox" id="pauseEv" ${G.pause?'checked':''}> Bei Crashs und Höhenflügen anhalten</label>`}`;
+  TRADE.filter(avail).forEach(a => {
+    PARTS.forEach(([k,,,f]) => {
+      $('#s_'+a.id+'_'+k).onclick = () => sell(a, f);
+      $('#b_'+a.id+'_'+k).onclick = () => buy(a, f === 1 ? G.cash : G.cash*f);
+    });
+    const amt = () => parseFloat(String($('#v_'+a.id).value).replace(',', '.'));
+    $('#sv_'+a.id).onclick = () => sellAmt(a, amt());
+    $('#bv_'+a.id).onclick = () => buyAmt(a, amt());
+  });
+  if (G.done) $('#again').onclick = showSim;
+  else {
+    $('#y1').onclick = () => advance(1); $('#y5').onclick = () => advance(5); $('#yE').onclick = () => advance(YEARS);
+    $('#pauseEv').onchange = e => { G.pause = e.target.checked; };
+  }
+  const f = fid && document.getElementById(fid);
+  if (f && !f.disabled) f.focus();
+}
+
+const PARTS = [['q','¼','ein Viertel',.25],['h','½','die Hälfte',.5],['d','¾','drei Viertel',.75],['a','alles','alles',1]];
+function badAmt(){ setSay('think', 'Gib einen Betrag in Euro ein, zum Beispiel <b>100</b>.'); }
+function sellAmt(a, amt){
+  const v = G.pos[a.id].val;
+  if (!(amt >= 1)) return badAmt();
+  if (amt > v + 0.5) return setSay('think', `So viel steckt in ${a.name} gar nicht drin – höchstens <b>${eur(v)}</b>.`);
+  sell(a, amt >= v - 0.5 ? 1 : amt / v);
+}
+function buyAmt(a, amt){
+  if (!(amt >= 1)) return badAmt();
+  if (amt > G.cash + 0.5) return setSay('think', `So viel Bargeld habe ich nicht – nur <b>${eur(G.cash)}</b>. Vielleicht erst etwas anderes verkaufen?`);
+  buy(a, amt >= G.cash - 0.5 ? G.cash : amt);
+}
+function sell(a, part){
+  const p = G.pos[a.id], v = p.val*part, c = p.cost*part, gain = v-c;
+  if (part === 1){ p.val = 0; p.cost = 0; } else { p.val -= v; p.cost -= c; }
+  G.cash += v; p.real += gain; G.realTot += gain; G.trades++;
+  let taxTxt = '';
+  if (G.pro && a.tax === 'kap'){
+    G.yGain += gain;
+    const due = Math.max(0, G.yGain + G.carry - FREI) * TAX, d = due - G.paidY;
+    G.cash -= d; G.paidY = due; G.taxTot += d;
+    taxTxt = d > 0.5 ? ` Steuern: ${eur(d)}.` : d < -0.5 ? ` ${eur(-d)} Steuern zurück, weil der Verlust verrechnet wird.` : gain >= 0.5 ? ' Steuerfrei dank Freibetrag.' : gain <= -0.5 ? ' Der Verlust kommt in den Verlusttopf und senkt spätere Steuern.' : '';
+  } else if (G.pro && gain >= 0.5) taxTxt = ' Steuerfrei nach einem Jahr Haltedauer.';
+  const panic = gain < 0 && G.y === G.crashY && (a.id === 'etf' || a.id === 'aktie');
+  if (panic) G.panic = true;
+  G.news.push(`<span class="${gain>=0?'good':'bad'}">Jahr ${G.y}: ${gain>=0?'Gewinn mitgenommen':'Verlust realisiert'} – ${a.name} für ${eur(v)} verkauft (${sgn(gain)}).${taxTxt}</span>`);
+  renderNews();
+  setSay(gain>=0?'happy':'think', panic
+    ? 'Verkauft mitten im Crash. Das fühlt sich sicher an – aber jetzt ist der Verlust echt. Wer durchhält, erlebt oft die Erholung.'
+    : gain >= 0 ? `Gewinn gesichert: <b>${sgn(gain)}</b>. Das Geld liegt jetzt als Bargeld bereit – ohne Zinsen. Lege ich es neu an?`
+    : `Verlust realisiert: <b>${sgn(gain)}</b>. Weh tut’s trotzdem – aber jetzt kann ich das Geld woanders neu anlegen${G.pro&&a.tax==='kap'?', und der Verlust spart mir Steuern auf spätere Gewinne':''}.`);
+  renderPlay();
+}
+function buy(a, amt){
+  if (amt < 1) return;
+  const p = G.pos[a.id]; G.cash -= amt; p.val += amt; p.cost += amt; G.trades++;
+  const dip = a.id === 'etf' && G.y === G.crashY;
+  if (dip) G.dip = true;
+  G.news.push(`<span>Jahr ${G.y}: ${G.realTot!==0||G.y>0?'Neu angelegt':'Angelegt'} – ${eur(amt)} in ${a.name}.</span>`);
+  renderNews();
+  setSay(dip?'wow':'happy', dip ? 'Im Crash nachgekauft – mutig! Jetzt bekomme ich die Anteile zum Schnäppchenpreis.' : `${eur(amt)} stecken jetzt in <b>${a.name}</b>. Mal sehen, was die Zeit daraus macht.`);
+  renderPlay();
+}
+
+function advance(n){
+  if (G.busy || G.done) return;
+  const fid = document.activeElement && document.activeElement.id;
+  const target = Math.min(YEARS, G.y+n);
+  G.busy = true; renderPlay();
+  const tick = () => {
+    const ev = yearStep();
+    const stop = G.y >= target || (ev && G.pause && n > 1);
+    if (stop){ clearInterval(simTimer); G.busy = false; }
+    if (G.y >= YEARS) finishSim();
+    else if (ev) setSay(ev.mood, ev.say);
+    else if (stop) setSay('think', hint());
+    renderPlay(stop ? fid : null); drawSim(G.hist);
+    return stop;
+  };
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches){ while (!tick()); }
+  else simTimer = setInterval(tick, 140);
+}
+function yearStep(){
+  G.carry = Math.min(0, G.yGain + G.carry); G.yGain = 0; G.paidY = 0;
+  G.y++;
+  const infl = Math.max(-0.01, 0.025 + 0.012*randn()); G.price *= 1+infl;
+  const r = {};
+  TRADE.forEach(a => { const p = G.pos[a.id]; if (p.val <= 0) return; r[a.id] = a.ret(); p.val *= 1 + r[a.id]; });
+  const tot = total(); G.hist.push({tot, real: tot/G.price});
+  const add = (t,c) => G.news.push(`<span class="${c}">Jahr ${G.y}: ${t}</span>`);
+  let ev = null;
+  if (r.etf < -0.2){ G.crashY = G.y; add(`Börsencrash! Viele wollen gleichzeitig verkaufen, kaum jemand will kaufen – der Weltindex fällt um ${Math.round(-r.etf*100)} %.`,'bad');
+    ev = {mood:'sad', say:`Crash! Viele Anleger verkaufen in Panik, und kaum jemand kauft – darum ist mein ETF um ${Math.round(-r.etf*100)} % gefallen. Verkaufe ich jetzt, wird der Verlust echt. Durchhalten – oder sogar günstig nachkaufen?`}; }
+  else if (r.etf > 0.25){ add(`Starkes Börsenjahr: Mehr Käufer als Verkäufer – ETF +${Math.round(r.etf*100)} %.`,'good');
+    ev = {mood:'wow', say:`Was für ein Jahr: Viele wollen Aktien haben, das treibt die Kurse – ETF +${Math.round(r.etf*100)} %! Nehme ich einen Teil des Gewinns mit – oder lasse ich ihn weiterlaufen?`}; }
+  if (r.aktie === -1){ add('Deine Einzelaktie ist pleite. Alles weg.','bad');
+    ev = {mood:'sad', say: G.pro ? 'Meine Einzelaktie ist pleite – sie ist nichts mehr wert. Wenn ich sie verkaufe, wird der Verlust realisiert und senkt meine Steuern auf andere Gewinne.' : 'Meine Einzelaktie ist pleite – sie ist nichts mehr wert. Darum steckt man nie alles in eine einzige Firma.'}; }
+  if (r.btc < -0.55){ add(`Krypto-Winter: Viele verkaufen, kaum jemand kauft – Bitcoin −${Math.round(-r.btc*100)} %.`,'bad');
+    ev = ev || {mood:'sad', say:`Bitcoin ist um ${Math.round(-r.btc*100)} % abgestürzt. Aussteigen oder abwarten?`}; }
+  else if (r.btc > 1){ add(`Bitcoin-Rausch: Alle wollen Bitcoin, aber es gibt nicht mehr davon – +${Math.round(r.btc*100)} %!`,'good');
+    ev = ev || {mood:'wow', say:`Bitcoin +${Math.round(r.btc*100)} %! Gewinne mitnehmen, bevor der nächste Absturz kommt?`}; }
+  if (r.gold > 0.25) add(`Goldrausch: Viele kaufen Gold aus Angst vor Krisen – die Nachfrage treibt den Preis: +${Math.round(r.gold*100)} %.`,'good');
+  else if (r.gold < -0.15) add(`Gold −${Math.round(-r.gold*100)} %: Die Angst lässt nach, weniger Leute wollen Gold kaufen.`,'bad');
+  if (infl > 0.045) add(`Hohe Inflation: Preise steigen um ${(infl*100).toFixed(1).replace('.',',')} %.`,'bad');
+  renderNews();
+  return ev;
+}
+function hint(){
+  const held = TRADE.filter(a => G.pos[a.id].cost >= 0.5).map(a => ({a, x: G.pos[a.id].val/G.pos[a.id].cost - 1}));
+  const up = held.sort((p,q) => q.x-p.x)[0], down = held[held.length-1];
+  if (up && up.x > 0.5) return `Jahr ${G.y}: <b>${up.a.name}</b> liegt ${pct(up.x)} im Plus. Gewinn mitnehmen oder laufen lassen?`;
+  if (down && down.x < -0.2) return `Jahr ${G.y}: <b>${down.a.name}</b> liegt ${pct(down.x)} im Minus. Verkaufen würde den Verlust echt machen. Hoffen oder Schlussstrich?`;
+  if (G.cash > total()*0.3 && G.y < YEARS) return `Jahr ${G.y}: Viel Bargeld liegt ohne Zinsen herum (${eur(G.cash)}). Lege ich es neu an?`;
+  return `Jahr ${G.y}: Alles im Rahmen. Wie geht es weiter?`;
+}
+
+function drawSim(hist){
+  const cv=$('#sC'); if(!cv) return; const {ctx,w,h}=setupCanvas(cv); const pad={l:58,r:10,t:10,b:28};
+  const start=G?G.start:S.money; const ymax=niceMax(Math.max(start*1.5, ...(hist||[]).map(p=>p.tot)));
+  axes(ctx,w,h,pad,ymax,YEARS,'Jahre');
+  const X=y=>pad.l+(w-pad.l-pad.r)*y/YEARS, Y=v=>pad.t+(h-pad.t-pad.b)*(1-v/ymax);
+  ctx.setLineDash([3,4]); ctx.strokeStyle=css('--muted'); ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(X(0),Y(start)); ctx.lineTo(X(YEARS),Y(start)); ctx.stroke(); ctx.setLineDash([]);
+  if(!hist) return;
+  const line=(key,col,dash)=>{ ctx.setLineDash(dash||[]); ctx.strokeStyle=col; ctx.lineWidth=2.5; ctx.beginPath(); hist.forEach((p,y)=>y?ctx.lineTo(X(y),Y(p[key])):ctx.moveTo(X(y),Y(p[key]))); ctx.stroke(); ctx.setLineDash([]);
+    const l=hist[hist.length-1]; ctx.fillStyle=col; ctx.beginPath(); ctx.arc(X(hist.length-1),Y(l[key]),4,0,7); ctx.fill(); };
+  line('real',css('--gold'),[6,4]); line('tot',css('--mint'));
+}
+function finishSim(){
+  G.done = true; G.busy = false; renderMode();
+  const start = G.start, end = G.hist[G.hist.length-1], realGain = end.real/start - 1;
+  let open = 0; TRADE.forEach(a => { if (a.tax === 'kap') open += G.pos[a.id].val - G.pos[a.id].cost; });
+  const exitTax = Math.max(0, Math.max(0, G.yGain + open + G.carry - FREI)*TAX - G.paidY);
+  const rows = TRADE.filter(a => { const p = G.pos[a.id]; return p.cost >= 0.5 || p.val >= 0.5 || Math.abs(p.real) >= 0.5; }).map(a => { const p = G.pos[a.id];
+    return `<tr><td>${a.name}</td><td class="num">${eur(p.val)}</td><td class="num">${p.cost>=0.5||p.val>=0.5?sgn(p.val-p.cost):'–'}</td><td class="num">${Math.abs(p.real)>=0.5?sgn(p.real):'–'}</td></tr>`; }).join('')
+    + `<tr><td>Bargeld</td><td class="num">${eur(G.cash)}</td><td class="num">–</td><td class="num">–</td></tr>`
+    + (G.fun > 0 ? `<tr><td>Sofort ausgegeben</td><td class="num">Erinnerungen</td><td class="num">–</td><td class="num">−${eur(G.fun)}</td></tr>` : '');
+  let trade = '';
+  if (G.panic) trade = 'Ich habe im Crash mit Verlust verkauft. Hinterher ist man immer schlauer – aber oft erholt sich die Börse wieder. ';
+  else if (G.dip) trade = 'Im Crash nachzukaufen war mutig – genau dann gibt es Anteile zum Schnäppchenpreis. ';
+  else if (G.trades === 0) trade = 'Ich habe einfach alles liegen lassen. Bei breit gestreuten Anlagen ist das oft gar keine schlechte Idee. ';
+  if (G.cash > end.tot*0.5 && (alloc.cash||0) < 50) trade += 'Am Ende lag viel als Bargeld herum – Gewinne mitnehmen ist gut, aber ohne Zinsen nagt die Inflation daran. ';
+  let say;
+  if ((alloc.cash||0) >= 80 && G.trades === 0) say = `Unterm Kopfkissen ist nichts weggekommen – und trotzdem kann ich mir heute nur noch so viel kaufen wie früher mit ${eur(end.real)}. Die Inflation hat leise ${Math.round((1-1/G.price)*100)} % gefressen.`;
+  else if ((alloc.btc||0) >= 50) say = realGain>1 ? 'Wow, das ging steil! Aber war das Können oder Glück? Spiel nochmal und schau, wie oft es so gut ausgeht.' : 'Autsch. Bitcoin kann alles verdoppeln – oder halbieren. Mit so viel auf einer Karte war das eine Wette.';
+  else if ((alloc.aktie||0) >= 50) say = 'Eine einzige Firma ist ein Klumpenrisiko. Spiel ein paar Mal – manchmal geht es gut, manchmal ist alles weg.';
+  else if ((alloc.konsum||0) >= 50) say = 'Der Urlaub war großartig! Nur Vermögen ist davon nicht übrig. Konsum ist okay – solange ein Teil fürs Später bleibt.';
+  else if ((alloc.etf||0) >= 40) say = realGain>0 ? 'Breit gestreut und lange durchgehalten – auch durch die Crashs. So arbeitet der Zinseszins.' : 'Diesmal lief es mies. Das kommt vor – aber über 25 Jahre selten. Spiel nochmal und vergleiche.';
+  else say = realGain>0 ? 'Mein Geld ist auch nach der Inflation mehr wert als am Anfang. Probier andere Mischungen aus!' : 'Nach Abzug der Inflation bin ich ärmer als am Anfang. Welche Mischung schlägt die Teuerung?';
+  setSay(realGain>0?'wow':'think', `Geschafft – ${YEARS} Jahre sind um! Unten steht, was aus meinem Geld geworden ist.`);
+  $('#simRes').innerHTML = `<div class="kpis"><div class="kpi hl"><span class="label">Nach ${YEARS} Jahren</span><b>${eur(end.tot)}</b></div><div class="kpi"><span class="label">Kaufkraft in heutigen Euro</span><b>${eur(end.real)}</b></div><div class="kpi"><span class="label">Echter Zuwachs nach Inflation</span><b>${pct(realGain)}</b></div>${G.pro?`<div class="kpi"><span class="label">Steuern gezahlt</span><b>${eur(G.taxTot)}</b></div>`:''}</div>
+    <div class="tblwrap"><table class="tbl"><thead><tr><th>Anlage</th><th>Am Ende</th><th>${G.pro?'Buchgewinn/-verlust':'Auf dem Papier'}</th><th>${G.pro?'Realisiert':'Schon verkauft'}</th></tr></thead><tbody>${rows}</tbody></table></div>
+    ${G.pro && exitTax >= 0.5 ? `<p>Würde ich jetzt alles verkaufen, kämen noch etwa <b>${eur(exitTax)}</b> Steuern dazu.</p>` : ''}
+    <div class="say">${moni(realGain>0.5?'wow':realGain>0?'happy':'sad')}<div class="bubble"><p>${trade}${say}</p></div></div>`;
+}
+
+/* ---------- Start ---------- */
+let rT; window.addEventListener('resize',()=>{ clearTimeout(rT); rT=setTimeout(()=>{ if($('#zC')&&EXTRAS.zins.redraw) EXTRAS.zins.redraw(); if($('#sC')) drawSim(G&&G.hist); },150); });
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{ if($('#zC')&&EXTRAS.zins.redraw) EXTRAS.zins.redraw(); });
+showMap();
+</script>
+<script>
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
+</html>
